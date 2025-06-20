@@ -3,6 +3,7 @@ import { FaUserMd, FaLock, FaEnvelope, FaIdCard, FaHospital, FaPhone, FaClinicMe
 import { motion } from 'framer-motion';
 import Navbar from "../home/Navbar";
 import Footer from "../home/Footer";
+import DocLayout from './Doctor/DocLayout';
 
 const DoctorAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -217,7 +218,7 @@ const DoctorAuth = () => {
                     // Redirect to doctor dashboard after modal close
                     if (isLogin) {
                       // Replace with your actual navigation logic
-                      window.location.href = '/doctor-dashboard';
+                      window.location.href = '/doctor-layout';
                     }
                   }}
                   className="bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white py-2 px-6 rounded-lg font-medium hover:opacity-90 transition-opacity"

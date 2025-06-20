@@ -146,7 +146,7 @@ const DoctorsSection = () => {
           className="text-center mb-12"
         >
           <h2 className="text-4xl font-bold text-gray-800 mb-4">Our Potential Doctors</h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-red-600 via-red-500 to-green-600 mx-auto mb-6"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 mx-auto mb-6"></div>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Meet our team of highly qualified and experienced medical professionals dedicated to your health and well-being.
           </p>
@@ -163,7 +163,7 @@ const DoctorsSection = () => {
               whileHover={{ y: -5 }}
               className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
-              <div className="relative h-48 bg-gradient-to-r from-red-400 via-red-300 to-green-400">
+              <div className="relative h-48 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                 <div className="absolute bottom-4 left-4">
                   <div className="w-20 h-20 rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
@@ -182,7 +182,7 @@ const DoctorsSection = () => {
                     <h3 className="text-xl font-bold text-gray-800">{doctor.name}</h3>
                     <p className="text-sm text-blue-600">{doctor.designation}</p>
                   </div>
-                  <span className="px-3 py-1 bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white text-xs font-semibold rounded-full">
+                  <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white text-xs font-semibold rounded-full">
                     {doctor.specialist}
                   </span>
                 </div>
@@ -217,7 +217,7 @@ const DoctorsSection = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleAppointmentClick(doctor)}
-                    className="flex-1 bg-gradient-to-r from-red-600 via-red-500 to-green-600 hover:from-green-600 hover:to-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white font-medium py-2 px-4 rounded-lg transition-all"
                   >
                     Appointment
                   </motion.button>
