@@ -7,9 +7,9 @@ import { useState } from "react";
 import D1 from './image/d1.jpg';
 import D2 from './image/d2.jpg';
 import D3 from './image/d3.JPG';
-import D4 from './image/d4.jpg';
+import D4 from './image/d4.JPG';
 import D5 from './image/d5.jpg';
-import D6 from './image/d6.jpg';
+import D6 from './image/d6.JPG';
 
 const doctors = [
   {
