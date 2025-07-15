@@ -241,7 +241,7 @@ const AboutPage = () => {
           >
             <h2 className="text-3xl font-bold text-blue-800 mb-6 flex items-center">
               <FaPrescriptionBottleAlt className="mr-3 text-purple-600" />
-              Mediminders Digital Solutions
+              Medminders Digital Solutions
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

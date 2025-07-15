@@ -115,7 +115,7 @@ const MobileMenu = ({ isOpen, onClose, openPortal }) => {
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center">
                 <img src={logo} alt="Logo" className="h-10 mr-3" />
-                <span className="text-xl font-bold">MediMinders</span>
+                <span className="text-xl font-bold">MedMinders</span>
               </div>
               <button onClick={onClose} className="p-2">
                 <FaTimes className="text-gray-500 text-xl" />
@@ -149,7 +149,7 @@ const MobileMenu = ({ isOpen, onClose, openPortal }) => {
 
             <div className="mt-auto pt-6 border-t border-gray-200">
               <p className="text-gray-500 text-sm text-center">
-                © {new Date().getFullYear()} MediMinders
+                © {new Date().getFullYear()} MedMinders
               </p>
             </div>
           </div>
@@ -183,7 +183,7 @@ const Navbar = () => {
                 className="h-12 w-auto mr-3 rounded-xl"
               />
               <span className="text-2xl font-bold text-gray-800">
-                Medi<span className="text-blue-600">Minders</span>
+                Med<span className="text-blue-600">Minders</span>
               </span>
             </Link>
             

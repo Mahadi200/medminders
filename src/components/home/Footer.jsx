@@ -127,7 +127,7 @@ const Footer = () => {
             >
               <FaHeartbeat className="mr-3 text-pink-300 animate-pulse" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-300 to-blue-300">
-                Mediminders
+                Medminders
               </span>
             </motion.h3>
             <ul className="space-y-3">
@@ -213,7 +213,7 @@ const Footer = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
         >
-          <p>© {new Date().getFullYear()} Mediminders. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Medminders. All rights reserved.</p>
           <p className="mt-1 text-xs opacity-70">Committed to excellence in medical care and innovation</p>
         </motion.div>
       </div>

@@ -345,7 +345,7 @@ const Contact = () => {
           <div className="inline-flex items-center bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-sm">
             <FaFlask className="text-blue-500 mr-2" />
             <span className="text-gray-700 font-medium">
-              Mediminders Scientific Ecosystem v3.2 • Certified ISO 13485:2016
+              Medminders Scientific Ecosystem v3.2 • Certified ISO 13485:2016
             </span>
           </div>
         </motion.div>

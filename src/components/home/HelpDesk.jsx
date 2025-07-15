@@ -12,19 +12,170 @@ const specialistIcons = {
 };
 
 const specialistSuggestions = {
+  // Cardiology
   chest: "Cardiology",
   heart: "Cardiology",
+  palpitation: "Cardiology",
+  breathlessness: "Cardiology",
+  highbp: "Cardiology",
+  lowbp: "Cardiology",
+  hypertension: "Cardiology",
+  chestpain: "Cardiology",
+
+  // Neurology
   headache: "Neurology",
   migraine: "Neurology",
+  dizziness: "Neurology",
+  stroke: "Neurology",
+  epilepsy: "Neurology",
+  memoryloss: "Neurology",
+  numbness: "Neurology",
+  tremor: "Neurology",
+
+  // Orthopedics
   bone: "Orthopedics",
   fracture: "Orthopedics",
+  jointpain: "Orthopedics",
+  backpain: "Orthopedics",
+  neckpain: "Orthopedics",
+  arthritis: "Orthopedics",
+  knee: "Orthopedics",
+  shoulder: "Orthopedics",
+
+  // Pediatrics
   child: "Pediatrics",
   baby: "Pediatrics",
+  coughchild: "Pediatrics",
+  feverchild: "Pediatrics",
+  diarrheachild: "Pediatrics",
+  vomitingchild: "Pediatrics",
+  rashchild: "Pediatrics",
+  coldchild: "Pediatrics",
+
+  // Dermatology
   skin: "Dermatology",
   rash: "Dermatology",
+  itching: "Dermatology",
+  acne: "Dermatology",
+  eczema: "Dermatology",
+  psoriasis: "Dermatology",
+  fungal: "Dermatology",
+  hairfall: "Dermatology",
+  dandruff: "Dermatology",
+  ringworm: "Dermatology",
+
+  // General Medicine
   pain: "General",
-  fever: "General"
+  fever: "General",
+  cold: "General",
+  cough: "General",
+  weakness: "General",
+  tiredness: "General",
+  bodyache: "General",
+  nausea: "General",
+  vomiting: "General",
+  indigestion: "General",
+  appetite: "General",
+  dehydration: "General",
+  dizzinessgeneral: "General",
+  sweating: "General",
+  chills: "General",
+
+  // Gastroenterology
+  stomach: "Gastroenterology",
+  gastritis: "Gastroenterology",
+  ulcer: "Gastroenterology",
+  bloating: "Gastroenterology",
+  constipation: "Gastroenterology",
+  diarrhea: "Gastroenterology",
+  heartburn: "Gastroenterology",
+  nauseafood: "Gastroenterology",
+  liver: "Gastroenterology",
+  hepatitis: "Gastroenterology",
+  jaundice: "Gastroenterology",
+
+  // ENT
+  ear: "ENT",
+  hearingloss: "ENT",
+  nose: "ENT",
+  sinus: "ENT",
+  sorethroat: "ENT",
+  throatpain: "ENT",
+  tonsils: "ENT",
+  runnynose: "ENT",
+
+  // Pulmonology
+  breathing: "Pulmonology",
+  asthma: "Pulmonology",
+  coughlong: "Pulmonology",
+  wheezing: "Pulmonology",
+  tuberculosis: "Pulmonology",
+  shortnessofbreath: "Pulmonology",
+  chestcongestion: "Pulmonology",
+
+  // Gynecology
+  period: "Gynecology",
+  pregnancy: "Gynecology",
+  discharge: "Gynecology",
+  infertility: "Gynecology",
+  pcod: "Gynecology",
+  menstrualpain: "Gynecology",
+  irregularperiod: "Gynecology",
+  menopause: "Gynecology",
+
+  // Urology
+  urine: "Urology",
+  urinationpain: "Urology",
+  kidney: "Urology",
+  kidneystone: "Urology",
+  bladder: "Urology",
+  prostate: "Urology",
+
+  // Ophthalmology
+  eye: "Ophthalmology",
+  blurryvision: "Ophthalmology",
+  redeye: "Ophthalmology",
+  dryeye: "Ophthalmology",
+  itchingeye: "Ophthalmology",
+  visionloss: "Ophthalmology",
+
+  // Dentistry
+  tooth: "Dentistry",
+  cavity: "Dentistry",
+  gum: "Dentistry",
+  toothache: "Dentistry",
+  bleedinggum: "Dentistry",
+  badbreath: "Dentistry",
+
+  // Psychiatry
+  anxiety: "Psychiatry",
+  depression: "Psychiatry",
+  insomnia: "Psychiatry",
+  stress: "Psychiatry",
+  mood: "Psychiatry",
+  mental: "Psychiatry",
+
+  // Endocrinology
+  diabetes: "Endocrinology",
+  thyroid: "Endocrinology",
+  weightgain: "Endocrinology",
+  weightloss: "Endocrinology",
+
+  // Oncology
+  lump: "Oncology",
+  tumor: "Oncology",
+  cancer: "Oncology",
+  bleeding: "Oncology",
+
+  // Infectious Disease
+  covid: "Infectious Disease",
+  dengue: "Infectious Disease",
+  chikungunya: "Infectious Disease",
+  typhoid: "Infectious Disease",
+  malaria: "Infectious Disease",
+  infection: "Infectious Disease",
 };
+
 
 const HelpDesk = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
