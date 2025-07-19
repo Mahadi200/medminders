@@ -66,7 +66,7 @@ const doctors = [
   },
   {
     id: 5,
-    name: "Dr. Aisha Khan",
+    name: "Dr. Akash Khan",
     designation: "Dermatologist",
     specialist: "Dermatology",
     available: {
