@@ -1,0 +1,164 @@
+[
+  {
+    "generic_name": "Ceftriaxone",
+    "group": "3rd Gen Cephalosporin",
+    "brand_names": ["Exephin", "Ceftron", "Triject"],
+    "companies": ["Incepta Pharmaceuticals", "Square Pharmaceuticals PLC", "Eskayef Pharmaceuticals Ltd."],
+    "age_considerations": "সাধারণত নিরাপদ: নবজাতক থেকে শুরু করে সব বয়সের জন্য ব্যবহৃত হয়। তবে, নবজাতকদের ক্ষেত্রে জন্ডিস বা হাইপারবিলিরুবিনেমিয়া থাকলে সতর্কতা প্রয়োজন।",
+    "dose_duration": "Ceftriaxone: 1 g IV/IM once daily for 7 days",
+    "side_effects": "Diarrhea, rash, injection site pain (ডায়রিয়া, র‍্যাশ, ইনজেকশন সাইটে ব্যথা)"
+  },
+  {
+    "generic_name": "Cefixime",
+    "group": "3rd Gen Cephalosporin",
+    "brand_names": ["Cef-3", "Denvar", "Orcef"],
+    "companies": ["Square Pharmaceuticals PLC", "Healthcare Pharmaceuticals Limited", "Renata Pharma Ltd"],
+    "age_considerations": "সাধারণত নিরাপদ: শিশুদের মধ্যে বহুল ব্যবহৃত।",
+    "dose_duration": "Cefixime: 400 mg once daily for 7 days",
+    "side_effects": "Diarrhea, nausea (ডায়রিয়া, বমি ভাব)"
+  },
+  {
+    "generic_name": "Amoxicillin + Clavulanic Acid",
+    "group": "Penicillin + β-Lactamase Inhibitor",
+    "brand_names": ["Moxaclav", "Tyclav", "Avloclav"],
+    "companies": ["Square Pharmaceuticals PLC", "Beximco Pharmaceuticals Ltd.", "ACI Limited"],
+    "age_considerations": "সাধারণত নিরাপদ: নবজাতক থেকে শুরু করে সব বয়সের জন্য ব্যবহৃত হয়। কিডনি ফাংশন দুর্বল হলে ডোজ কমানো লাগতে পারে।",
+    "dose_duration": "Amoxicillin + Clavulanic Acid: 625 mg TDS for 7 days",
+    "side_effects": "Diarrhea, vomiting, liver upset (ডায়রিয়া, বমি, লিভার সমস্যা)"
+  },
+  {
+    "generic_name": "Metronidazole",
+    "group": "Nitroimidazole",
+    "brand_names": ["Flamyd", "Flagyl", "Metrogyl"],
+    "companies": ["Incepta Pharmaceuticals", "Sanofi", "USV Private Limited"],
+    "age_considerations": "সাধারণত নিরাপদ: সকল বয়সের জন্য প্রযোজ্য।",
+    "dose_duration": "Metronidazole: 400 mg TDS for 7 days",
+    "side_effects": "Metallic taste, nausea (মুখে ধাতব স্বাদ, বমি)"
+  },
+  {
+    "generic_name": "Azithromycin",
+    "group": "Macrolide",
+    "brand_names": ["Zimax", "AZ", "Azaltic"],
+    "companies": ["Square Pharmaceuticals PLC", "Aristopharma Ltd.", "NIPRO JMI Pharma Ltd."],
+    "age_considerations": "সাধারণত নিরাপদ: সকল বয়সের জন্য ব্যবহৃত হয়। হৃদরোগের (QT Prolongation) ঝুঁকি বিবেচনা করা প্রয়োজন।",
+    "dose_duration": "Azithromycin: 500 mg once daily for 3 days",
+    "side_effects": "Diarrhea, QT prolongation (ডায়রিয়া, হার্ট রিদম সমস্যা)"
+  },
+  {
+    "generic_name": "Ciprofloxacin",
+    "group": "Fluoroquinolone",
+    "brand_names": ["Beuflox"],
+    "companies": ["Incepta Pharmaceuticals"],
+    "age_considerations": "১৮ বছরের নিচে কঠোরভাবে সীমাবদ্ধ।",
+    "dose_duration": "Ciprofloxacin: 500 mg BD for 7 days",
+    "side_effects": "Tendon pain, dizziness (টেন্ডন ব্যথা, মাথা ঘোরা)"
+  },
+  {
+    "generic_name": "Amoxicillin",
+    "group": "Penicillin",
+    "brand_names": ["Moxacil", "Tycil", "Avlomox"],
+    "companies": ["Square Pharmaceuticals PLC", "Beximco Pharmaceuticals Ltd.", "ACI Limited"],
+    "age_considerations": "সাধারণত নিরাপদ: নবজাতক থেকে শুরু করে সব বয়সের জন্য ব্যবহৃত হয়।",
+    "dose_duration": "Amoxicillin: 500 mg TDS for 7 days",
+    "side_effects": "Rash, diarrhea (র‍্যাশ, ডায়রিয়া)"
+  },
+  {
+    "generic_name": "Cefuroxime",
+    "group": "2nd Gen Cephalosporin",
+    "brand_names": ["Cefotil", "Xinarox", "Roxilab"],
+    "companies": ["Square Pharmaceuticals PLC", "NIPRO JMI PHARMA LIMITED", "Labaid Pharmaceuticals Limited"],
+    "age_considerations": "সাধারণত নিরাপদ: সকল বয়সের জন্য ব্যবহৃত হয়।",
+    "dose_duration": "Cefuroxime: 500 mg BD for 7 days",
+    "side_effects": "Nausea, allergy (বমি ভাব, অ্যালার্জি)"
+  },
+  {
+    "generic_name": "Meropenem",
+    "group": "Carbapenem",
+    "brand_names": ["Meroject", "Merocon", "I-Penam", "Aronem"],
+    "companies": ["Eskayef Pharmaceuticals Ltd.", "Beacon Pharmaceuticals PLC", "Incepta Pharmaceuticals Ltd.", "ACI Limited"],
+    "age_considerations": "বিশেষজ্ঞের তত্ত্বাবধানে নিরাপদ: গুরুতর সংক্রমণের জন্য ব্যবহৃত।",
+    "dose_duration": "Meropenem: 1 g IV every 8 hours for 10 days",
+    "side_effects": "Seizure (rare), diarrhea (খিঁচুনি, ডায়রিয়া)"
+  },
+  {
+    "generic_name": "Imipenem + Cilastatin",
+    "group": "Carbapenem",
+    "brand_names": ["Iminem", "Cilastam"],
+    "companies": ["Square Pharmaceuticals PLC", "Acme Laboratories Ltd."],
+    "age_considerations": "বিশেষজ্ঞের তত্ত্বাবধানে নিরাপদ।",
+    "dose_duration": "Imipenem + Cilastatin: 500 mg IV q6h for 10 days",
+    "side_effects": "Seizure, nausea (খিঁচুনি, বমি)"
+  },
+  {
+    "generic_name": "Vancomycin",
+    "group": "Glycopeptide",
+    "brand_names": ["Vanmycin", "Vancin", "Covan"],
+    "companies": ["Incepta Pharmaceuticals Ltd.", "Drug International Ltd.", "Renata PLC"],
+    "age_considerations": "সতর্কতার সাথে ব্যবহার: TDM প্রয়োজন।",
+    "dose_duration": "Vancomycin: 1 g IV every 12 hours for 10 days",
+    "side_effects": "Nephrotoxicity, Red man syndrome (কিডনি সমস্যা, লালচে হওয়া)"
+  },
+  {
+    "generic_name": "Linezolid",
+    "group": "Oxazolidinone",
+    "brand_names": ["Arlin", "Linox", "Linex"],
+    "companies": ["Beximco Pharmaceuticals Ltd.", "Square Pharmaceuticals PLC", "Incepta Pharmaceuticals Ltd."],
+    "age_considerations": "সতর্কতার সাথে ব্যবহার: MDR সংক্রমণের জন্য।",
+    "dose_duration": "Linezolid: 600 mg BD for 10 days",
+    "side_effects": "Low platelet, headache (প্লাটিলেট কমে যাওয়া, মাথা ব্যথা)"
+  },
+  {
+    "generic_name": "Colistin (Polymyxin E)",
+    "group": "Polymyxin",
+    "brand_names": ["Colistril", "Colistin"],
+    "companies": ["Square Pharmaceuticals PLC", "Incepta Pharmaceuticals Ltd."],
+    "age_considerations": "শেষ ভরসার ওষুধ: MDR সংক্রমণের জন্য।",
+    "dose_duration": "Colistin: 4.5 MIU BD after loading for 10 days",
+    "side_effects": "Nephrotoxicity, neurotoxicity (কিডনি ও নার্ভ সমস্যা)"
+  },
+  {
+    "generic_name": "Polymyxin B",
+    "group": "Polymyxin",
+    "brand_names": ["PMB", "Polymax-B"],
+    "companies": ["Square Pharmaceuticals PLC", "Incepta Pharmaceuticals Ltd."],
+    "age_considerations": "শেষ ভরসার ওষুধ।",
+    "dose_duration": "Polymyxin B: 1.5 mg/kg/day IV for 10 days",
+    "side_effects": "Kidney damage, muscle weakness (কিডনি সমস্যা, দুর্বলতা)"
+  },
+  {
+    "generic_name": "Levofloxacin",
+    "group": "Fluoroquinolone",
+    "brand_names": ["Levo", "Levoxin"],
+    "companies": ["Square Pharmaceuticals PLC", "Acme Laboratories Ltd."],
+    "age_considerations": "১৮ বছরের নিচে কঠোরভাবে সীমাবদ্ধ।",
+    "dose_duration": "Levofloxacin: 500 mg once daily for 7 days",
+    "side_effects": "Tendon rupture, QT prolongation (টেন্ডন সমস্যা, হার্ট সমস্যা)"
+  },
+  {
+    "generic_name": "Moxifloxacin",
+    "group": "Fluoroquinolone",
+    "brand_names": ["Moxif", "Moxilin"],
+    "companies": ["Square Pharmaceuticals PLC", "Incepta Pharmaceuticals Ltd."],
+    "age_considerations": "১৮ বছরের নিচে কঠোরভাবে সীমাবদ্ধ।",
+    "dose_duration": "Moxifloxacin: 400 mg once daily for 7 days",
+    "side_effects": "QT prolongation, nausea (হার্ট সমস্যা, বমি)"
+  },
+  {
+    "generic_name": "Cefepime",
+    "group": "4th Gen Cephalosporin",
+    "brand_names": ["Cefepime", "Maxipime"],
+    "companies": ["General Pharmaceuticals Ltd.", "Square Pharmaceuticals PLC"],
+    "age_considerations": "সাধারণত নিরাপদ: গুরুতর সংক্রমণের জন্য।",
+    "dose_duration": "Cefepime: 2 g IV every 12 hours for 10 days",
+    "side_effects": "Neurotoxicity, diarrhea (নার্ভ সমস্যা, ডায়রিয়া)"
+  },
+  {
+    "generic_name": "Piperacillin + Tazobactam",
+    "group": "Penicillin + β-Lactamase Inhibitor",
+    "brand_names": ["Piptaz", "Tazocin"],
+    "companies": ["Square Pharmaceuticals PLC", "Eskayef Pharmaceuticals Ltd."],
+    "age_considerations": "সাধারণত নিরাপদ: গুরুতর সংক্রমণের জন্য। কিডনি ফাংশন বিবেচনায় নিতে হয়।",
+    "dose_duration": "Piperacillin + Tazobactam: 4.5 g IV q8h for 10 days",
+    "side_effects": "Diarrhea, rash (ডায়রিয়া, র‍্যাশ)"
+  }
+]

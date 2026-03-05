@@ -1,11 +1,20 @@
-import { FaPills, FaFileMedical, FaHeartbeat, FaCalendarAlt, FaUserMd, FaPrint } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaPills, FaFileMedical, FaHeartbeat, FaCalendarAlt, FaUserMd, FaPrint, FaFileUpload } from 'react-icons/fa';
 import { MdBloodtype, MdVaccines } from 'react-icons/md';
 import { GiHealthNormal } from 'react-icons/gi';
-import { motion } from 'framer-motion';
-import Navbar from '../Navbar'
-import Footer from '../Footer'
+import { motion as Motion } from 'framer-motion';
+import Navbar from '../Navbar';
+import Footer from '../Footer';
+import PrescriptionUploadModal from './PrescriptionUploadModal';
+import PrescriptionResults from './PrescriptionResults';
 
 const PatientDashboard = () => {
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+
+  const handleScanSuccess = (data) => {
+    setScanResult(data);
+  };
   // Mock patient data
   const patientInfo = {
     name: "Mohammad Rahman",
@@ -127,6 +136,15 @@ const PatientDashboard = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
 
+  if (scanResult) {
+    return (
+      <PrescriptionResults
+        scanData={scanResult}
+        onBack={() => setScanResult(null)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen">
         <Navbar/>
@@ -138,6 +156,14 @@ const PatientDashboard = () => {
             <h1 className="text-2xl font-bold">MedMinders Patient Portal</h1>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="bg-teal-500 hover:bg-teal-600 px-4 py-2 rounded-lg text-white font-medium transition flex items-center gap-2"
+              aria-label="Upload prescription"
+            >
+              <FaFileUpload />
+              Upload Prescription
+            </button>
             <button className="bg-cyan-400 bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
               <FaPrint className="inline mr-2" />
               Print Records
@@ -157,11 +183,11 @@ const PatientDashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Patient Profile Card */}
-        <motion.div 
+        <Motion.div 
           initial="hidden"
           animate="visible"
           variants={fadeIn}
-          className="lg:col-span-1 bg-cyan-400rounded-xl shadow-md overflow-hidden"
+          className="lg:col-span-1 bg-white rounded-xl shadow-md overflow-hidden"
         >
           <div className="bg-gradient-to-r from-blue-500 to-teal-400 p-6 text-center text-white">
             <img 
@@ -203,12 +229,12 @@ const PatientDashboard = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </Motion.div>
 
         {/* Main Dashboard Area */}
         <div className="lg:col-span-2 space-y-6">
           {/* Prescriptions Section */}
-          <motion.div
+          <Motion.div
             initial="hidden"
             animate="visible"
             variants={fadeIn}
@@ -255,10 +281,10 @@ const PatientDashboard = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </Motion.div>
 
           {/* Test Reports Section */}
-          <motion.div
+          <Motion.div
             initial="hidden"
             animate="visible"
             variants={fadeIn}
@@ -297,10 +323,10 @@ const PatientDashboard = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </Motion.div>
 
           {/* Disease History Section */}
-          <motion.div
+          <Motion.div
             initial="hidden"
             animate="visible"
             variants={fadeIn}
@@ -345,9 +371,15 @@ const PatientDashboard = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </Motion.div>
         </div>
       </main>
+
+      <PrescriptionUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onScanSuccess={handleScanSuccess}
+      />
 
       <Footer/>
     </div>
