@@ -102,13 +102,13 @@ const PatientDashboard = () => {
     }
   ];
 
-  // Patient record files (prescription images)
+  // Patient record files (synthetic demo placeholder)
   const patientRecordFiles = [
     {
       id: 1,
-      title: "Prescription - Dr. Alifa Salbin",
-      date: "2023-06-10",
-      image: "/image/assets/prescription1.jpeg",
+      title: "Prescription - Dr. Demo Physician",
+      date: "2026-01-15",
+      image: "/image/placeholder-prescription.png",
       type: "Prescription"
     }
   ];

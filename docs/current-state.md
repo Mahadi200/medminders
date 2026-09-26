@@ -13,7 +13,7 @@
     - `README.md`: Updated with repository documentation.
   - Untracked files:
     - `server/`: Complete backend application directory (untracked in git root).
-    - `public/image/assets/`: Contains `prescription1.jpeg` sample image.
+    - `public/image/assets/`: Contained a sample prescription image (removed in Slice 3 due to PHI).
     - `src/components/home/PatientFeedback.jsx`: Added testimonials carousel component.
 
 ---
