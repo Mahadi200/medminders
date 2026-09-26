@@ -7,17 +7,273 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  role      String   // "patient" | "doctor" | "admin"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// -------------------------------------------------------------
+// 1. Identity, Tenancy & Roles
+// -------------------------------------------------------------
 
-  prescriptions   PrescriptionUpload[]
-  prescriptionScans PrescriptionScan[]
+enum SystemRole {
+  PATIENT
+  CAREGIVER
+  DOCTOR
+  PHARMACIST
+  HOSPITAL_ADMIN
+  SUPERADMIN
 }
 
+enum OrganizationType {
+  HOSPITAL
+  CLINIC
+  PHARMACY
+  DIAGNOSTIC
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+model Organization {
+  id          String           @id @default(cuid())
+  name        String
+  type        OrganizationType
+  regNumber   String           @unique
+  address     String?
+  phone       String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  staffAssignments UserRoleAssignment[]
+  prescriptions    Prescription[]
+  dispenseRecords  DispenseRecord[]
+  consultations    Consultation[]
+  careRelationships CareRelationship[]
+  consentGrants    ConsentGrant[]
+  auditEvents      AuditEvent[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  phoneNumber  String?   @unique
+  passwordHash String?
+  legacyRole   String?   // Preserves legacy "role" column ('patient' | 'doctor' | 'admin')
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Role Assignments
+  roles UserRoleAssignment[]
+
+  // Professional Credentials
+  clinicianCredential  ClinicianCredential?
+  pharmacistCredential PharmacistCredential?
+
+  // Patient Profile & Relationships
+  patientProfile         PatientProfile?
+  caregiverFor           CaregiverAuthorization[] @relation("CaregiverToPatient")
+  caregiversAuthorized   CaregiverAuthorization[] @relation("PatientToCaregiver")
+  careRelationshipsAsDoc CareRelationship[]       @relation("ClinicianCareRelationships")
+  careRelationshipsAsPt  CareRelationship[]       @relation("PatientCareRelationships")
+
+  // Consent
+  consentsGiven    ConsentGrant[] @relation("PatientConsents")
+  consentsReceived ConsentGrant[] @relation("GranteeConsents")
+
+  // Clinical & Dispensing Relations
+  consultationsAsDoc Consultation[] @relation("DoctorConsultations")
+  consultationsAsPt  Consultation[] @relation("PatientConsultations")
+  prescriptionsAsDoc Prescription[] @relation("PrescribingDoctor")
+  prescriptionsAsPt  Prescription[] @relation("PatientPrescriptions")
+  dispensesAsPharm   DispenseRecord[] @relation("DispensingPharmacist")
+
+  // Legacy Preserved Relations
+  prescriptions PrescriptionUpload[]
+  prescriptionScans PrescriptionScan[]
+
+  // Audit
+  auditEventsTriggered AuditEvent[] @relation("ActorAuditEvents")
+  auditEventsTargeted  AuditEvent[] @relation("TargetAuditEvents")
+}
+
+model UserRoleAssignment {
+  id                 String     @id @default(cuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId     String?
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  role               SystemRole
+  isVerified         Boolean    @default(false)
+  verifiedAt         DateTime?
+  verifiedByUserId   String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@unique([userId, role, organizationId])
+  @@index([userId, role])
+}
+
+model ClinicianCredential {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bmdcNumber         String             @unique // Bangladesh Medical & Dental Council Registration
+  specialty          String?
+  degrees            String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model PharmacistCredential {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNumber      String             @unique // Pharmacy Council Registration Number
+  pharmacyReg        String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+// -------------------------------------------------------------
+// 2. Patient Profiles, Care Relationships & Consent
+// -------------------------------------------------------------
+
+model PatientProfile {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName               String
+  dateOfBirth            DateTime?
+  gender                 String?
+  bloodGroup             String?
+  emergencyContactName   String?
+  emergencyContactPhone  String?
+  allergiesJson          String    @default("[]") @db.Text
+  chronicConditionsJson  String    @default("[]") @db.Text
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+enum RelationshipType {
+  ATTENDING
+  CONSULTING
+  EMERGENCY_REFERRAL
+}
+
+model CareRelationship {
+  id               String           @id @default(cuid())
+  patientId        String
+  patient          User             @relation("PatientCareRelationships", fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId      String
+  clinician        User             @relation("ClinicianCareRelationships", fields: [clinicianId], references: [id], onDelete: Restrict)
+  organizationId   String?
+  organization     Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  relationshipType RelationshipType @default(ATTENDING)
+  isActive         Boolean          @default(true)
+  startedAt        DateTime         @default(now())
+  endedAt          DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([patientId, isActive])
+  @@index([clinicianId, isActive])
+}
+
+enum CaregiverRelation {
+  PARENT
+  SPOUSE
+  CHILD
+  LEGAL_GUARDIAN
+}
+
+model CaregiverAuthorization {
+  id                   String            @id @default(cuid())
+  patientId            String
+  patient              User              @relation("PatientToCaregiver", fields: [patientId], references: [id], onDelete: Cascade)
+  caregiverId          String
+  caregiver            User              @relation("CaregiverToPatient", fields: [caregiverId], references: [id], onDelete: Cascade)
+  relationshipToPatient CaregiverRelation
+  isActive             Boolean           @default(true)
+  grantedAt            DateTime          @default(now())
+  revokedAt            DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@unique([patientId, caregiverId])
+  @@index([caregiverId, isActive])
+}
+
+enum ConsentStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ConsentPurpose {
+  CLINICAL_CARE
+  DISPENSING
+  DIAGNOSTIC_REVIEW
+}
+
+model ConsentGrant {
+  id                    String         @id @default(cuid())
+  patientId             String
+  patient               User           @relation("PatientConsents", fields: [patientId], references: [id], onDelete: Cascade)
+  granteeUserId         String?
+  granteeUser           User?          @relation("GranteeConsents", fields: [granteeUserId], references: [id], onDelete: Cascade)
+  granteeOrganizationId String?
+  granteeOrganization   Organization?  @relation(fields: [granteeOrganizationId], references: [id], onDelete: SetNull)
+  purpose               ConsentPurpose
+  status                ConsentStatus  @default(ACTIVE)
+  grantedAt             DateTime       @default(now())
+  expiresAt             DateTime
+  revokedAt             DateTime?
+  revocationReason      String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([patientId, status, expiresAt])
+  @@index([granteeUserId, status])
+}
+
+// -------------------------------------------------------------
+// 3. Consultations & Prescriptions (Canonical + Legacy Mapped)
+// -------------------------------------------------------------
+
+enum ConsultationStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Consultation {
+  id             String             @id @default(cuid())
+  organizationId String?
+  organization   Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  patientId      String
+  patient        User               @relation("PatientConsultations", fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId    String
+  clinician      User               @relation("DoctorConsultations", fields: [clinicianId], references: [id], onDelete: Restrict)
+  chiefComplaint String?            @db.Text
+  diagnosisNotes String?            @db.Text
+  status         ConsultationStatus @default(COMPLETED)
+  scheduledAt    DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  prescriptions  Prescription[]
+}
+
+// Legacy Upload Record Preserved
 model PrescriptionUpload {
   id        String   @id @default(cuid())
   userId    String
@@ -29,6 +285,7 @@ model PrescriptionUpload {
   scans PrescriptionScan[]
 }
 
+// Legacy Scan Record Preserved: Explicitly DRAFT_UNREVIEWED
 model PrescriptionScan {
   id             String   @id @default(cuid())
   uploadId       String
@@ -40,23 +297,238 @@ model PrescriptionScan {
   medicinesJson  String   @db.Text // JSON array of parsed medicines
   antibioticsJson String  @db.Text // JSON array of matched antibiotics
   alertsJson     String?  @db.Text // JSON array of safety alerts
+  scanStatus     String   @default("DRAFT_UNREVIEWED") // Clinical Safety Constraint
   createdAt      DateTime @default(now())
+
+  prescriptionsDrafted Prescription[]
+  clinicalAlerts       ClinicalAlert[]
 
   @@index([userId])
   @@index([uploadId])
 }
 
-model Antibiotic {
+enum PrescriptionStatus {
+  DRAFT_UNREVIEWED
+  CLINICIAN_REVIEWED
+  SIGNED
+  DISPENSED
+  CANCELLED
+}
+
+model Prescription {
+  id                String             @id @default(cuid())
+  organizationId    String?
+  organization      Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  consultationId    String?
+  consultation      Consultation?      @relation(fields: [consultationId], references: [id], onDelete: SetNull)
+  patientId         String
+  patient           User               @relation("PatientPrescriptions", fields: [patientId], references: [id], onDelete: Restrict)
+  prescriberId      String
+  prescriber        User               @relation("PrescribingDoctor", fields: [prescriberId], references: [id], onDelete: Restrict)
+  scanId            String?            // Optional linkage if drafted from an OCR scan
+  scan              PrescriptionScan?  @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  status            PrescriptionStatus @default(DRAFT_UNREVIEWED)
+  version           Int                @default(1)
+  previousVersionId String?
+  previousVersion   Prescription?      @relation("PrescriptionVersions", fields: [previousVersionId], references: [id], onDelete: SetNull)
+  nextVersions      Prescription[]     @relation("PrescriptionVersions")
+  isLatestVersion   Boolean            @default(true)
+  signatureHash     String?            // SHA-256 digital signature of prescription payload
+  signedAt          DateTime?
+  diagnosis         String?
+  clinicalNotes     String?            @db.Text
+  verificationToken String?            @unique // Scoped token for pharmacy QR code verification
+  tokenExpiresAt    DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  items           PrescriptionItem[]
+  alerts          ClinicalAlert[]
+  dispenseRecords DispenseRecord[]
+
+  @@index([patientId, isLatestVersion])
+  @@index([verificationToken])
+  @@index([organizationId, status])
+}
+
+model PrescriptionItem {
+  id                 String        @id @default(cuid())
+  prescriptionId     String
+  prescription       Prescription  @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicineName       String
+  genericName        String?
+  form               String?
+  strength           String?
+  frequency          String?
+  duration           String?
+  instructions       String?
+  prescribedQuantity Int           @default(1)
+  dispensedQuantity  Int           @default(0)
+  isAntibiotic       Boolean       @default(false)
+  antibioticId       String?
+  antibiotic         Antibiotic?   @relation(fields: [antibioticId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  dispenseItems DispenseItem[]
+
+  @@index([prescriptionId])
+}
+
+// -------------------------------------------------------------
+// 4. Clinical Decision Support & Safety Alerts
+// -------------------------------------------------------------
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertType {
+  STEWARDSHIP
+  RED_FLAG
+  INTERACTION
+  ALLERGY
+}
+
+model ClinicalAlert {
+  id                   String            @id @default(cuid())
+  prescriptionId       String?
+  prescription         Prescription?     @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  prescriptionScanId   String?
+  prescriptionScan     PrescriptionScan? @relation(fields: [prescriptionScanId], references: [id], onDelete: Cascade)
+  alertType            AlertType
+  severity             AlertSeverity
+  title                String
+  messageBn            String            @db.Text
+  messageEn            String            @db.Text
+  sourceCitation       String?
+  versionCode          String?
+  isAcknowledged       Boolean           @default(false)
+  acknowledgedByUserId String?
+  acknowledgedAt       DateTime?
+  createdAt            DateTime          @default(now())
+
+  @@index([prescriptionId])
+  @@index([prescriptionScanId])
+}
+
+// -------------------------------------------------------------
+// 5. Pharmacy Dispensing & Idempotency
+// -------------------------------------------------------------
+
+enum DispenseStatus {
+  PARTIAL
+  COMPLETED
+  REJECTED
+}
+
+model DispenseRecord {
+  id             String         @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription   @relation(fields: [prescriptionId], references: [id], onDelete: Restrict)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  pharmacistId   String
+  pharmacist     User           @relation("DispensingPharmacist", fields: [pharmacistId], references: [id], onDelete: Restrict)
+  dispenseStatus DispenseStatus @default(COMPLETED)
+  idempotencyKey String         @unique
+  dispensedAt    DateTime       @default(now())
+  notes          String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  dispenseItems DispenseItem[]
+
+  @@index([prescriptionId])
+  @@index([organizationId])
+  @@index([pharmacistId])
+}
+
+model DispenseItem {
+  id                 String           @id @default(cuid())
+  dispenseRecordId   String
+  dispenseRecord     DispenseRecord   @relation(fields: [dispenseRecordId], references: [id], onDelete: Cascade)
+  prescriptionItemId String
+  prescriptionItem   PrescriptionItem @relation(fields: [prescriptionItemId], references: [id], onDelete: Restrict)
+  quantityDispensed  Int
+  batchNumber        String?
+  expiryDate         DateTime?
+  createdAt          DateTime         @default(now())
+
+  @@index([dispenseRecordId])
+  @@index([prescriptionItemId])
+}
+
+model IdempotencyRecord {
   id               String   @id @default(cuid())
-  genericName      String   @unique
-  group            String?  @db.Text
-  brandNames       String[] // Array of brand names
-  companies        String[] // Array of companies
-  ageConsiderations String? @db.Text
-  doseDuration     String?  @db.Text
-  sideEffects      String?  @db.Text
+  idempotencyKey   String
+  endpoint         String
+  requestHash      String
+  responseStatus   Int?
+  responseBodyJson String?  @db.Text
+  lockedUntil      DateTime
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@unique([idempotencyKey, endpoint])
+  @@index([lockedUntil])
+}
+
+// -------------------------------------------------------------
+// 6. Antibiotic Master Knowledge Base (Preserved + Enhanced)
+// -------------------------------------------------------------
+
+enum AwareCategory {
+  ACCESS
+  WATCH
+  RESERVE
+  UNCLASSIFIED
+}
+
+model Antibiotic {
+  id                String         @id @default(cuid())
+  genericName       String         @unique
+  group             String?        @db.Text
+  brandNames        String[]       // Array of brand names
+  companies         String[]       // Array of companies
+  ageConsiderations String?        @db.Text
+  doseDuration      String?        @db.Text
+  sideEffects       String?        @db.Text
+  awareCategory     AwareCategory  @default(UNCLASSIFIED)
+  whoListingUrl     String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  prescriptionItems PrescriptionItem[]
+
   @@index([genericName])
+}
+
+// -------------------------------------------------------------
+// 7. Audit Trail (Immutable PHI & Security Logs)
+// -------------------------------------------------------------
+
+model AuditEvent {
+  id             String        @id @default(cuid())
+  actorUserId    String?
+  actor          User?         @relation("ActorAuditEvents", fields: [actorUserId], references: [id], onDelete: SetNull)
+  targetUserId   String?
+  target         User?         @relation("TargetAuditEvents", fields: [targetUserId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String
+  ipAddress      String?
+  userAgent      String?
+  metadataJson   String?       @db.Text
+  occurredAt     DateTime      @default(now())
+
+  @@index([occurredAt])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([organizationId, occurredAt])
 }
