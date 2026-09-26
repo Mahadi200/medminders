@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaPills, FaFileMedical, FaHeartbeat, FaCalendarAlt, FaUserMd, FaPrint, FaFileUpload } from 'react-icons/fa';
+import { FaPills, FaFileMedical, FaHeartbeat, FaCalendarAlt, FaUserMd, FaPrint, FaFileUpload, FaFileImage } from 'react-icons/fa';
 import { MdBloodtype, MdVaccines } from 'react-icons/md';
 import { GiHealthNormal } from 'react-icons/gi';
 import { motion as Motion } from 'framer-motion';
@@ -99,6 +99,17 @@ const PatientDashboard = () => {
         "HbA1c": "7.2%",
         "Average Glucose": "160 mg/dL"
       }
+    }
+  ];
+
+  // Patient record files (prescription images)
+  const patientRecordFiles = [
+    {
+      id: 1,
+      title: "Prescription - Dr. Alifa Salbin",
+      date: "2023-06-10",
+      image: "/image/assets/prescription1.jpeg",
+      type: "Prescription"
     }
   ];
 
@@ -322,6 +333,44 @@ const PatientDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </Motion.div>
+
+          {/* Patient Record Files Section */}
+          <Motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeIn}
+            transition={{ delay: 0.5 }}
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold flex items-center">
+                <FaFileImage className="mr-2" />
+                Patient Record Files
+              </h2>
+              <span className="bg-amber-200 text-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                {patientRecordFiles.length} file(s)
+              </span>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {patientRecordFiles.map(record => (
+                  <div key={record.id} className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="aspect-[3/4] bg-white overflow-hidden">
+                      <img 
+                        src={record.image} 
+                        alt={record.title} 
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-semibold text-gray-800 text-sm">{record.title}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{record.date} • {record.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </Motion.div>
 

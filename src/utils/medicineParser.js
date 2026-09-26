@@ -111,13 +111,55 @@ export function parseMedicineText(ocrText) {
   const medicines = [];
   const seen = new Set();
 
+  let currentMed = null;
+
   for (const line of lines) {
+    if (line.length < 2) continue;
+    if (/^(dr\.|doctor|date\b|rx\b|prescription)/i.test(line)) continue;
+
     const parsed = parseLine(line);
-    if (parsed && !seen.has(parsed.medicine_name.toLowerCase() + '|' + parsed.raw_line)) {
-      seen.add(parsed.medicine_name.toLowerCase() + '|' + parsed.raw_line);
-      medicines.push(parsed);
+    if (parsed) {
+      if (currentMed) {
+        medicines.push(currentMed);
+      }
+      currentMed = parsed;
+    } else if (currentMed) {
+      const extraStrength = extractStrength(line);
+      const extraForm = extractForm(line);
+      const extraFrequency = extractFrequency(line);
+      const extraDuration = extractDuration(line);
+
+      let updated = false;
+      if (extraStrength && !currentMed.strength) { currentMed.strength = extraStrength; updated = true; }
+      if (extraForm && !currentMed.form) { currentMed.form = extraForm; updated = true; }
+      if (extraFrequency && !currentMed.frequency) { currentMed.frequency = extraFrequency; updated = true; }
+      if (extraDuration && !currentMed.duration) { currentMed.duration = extraDuration; updated = true; }
+
+      if (updated) {
+        currentMed.raw_line += '\n' + line;
+        let confidence = 0.5;
+        if (currentMed.medicine_name.length >= 4) confidence += 0.15;
+        if (currentMed.strength) confidence += 0.15;
+        if (currentMed.frequency) confidence += 0.1;
+        if (currentMed.duration) confidence += 0.1;
+        if (/[a-zA-Z]{3,}/.test(currentMed.medicine_name)) confidence += 0.05;
+        currentMed.confidence = Math.min(1, confidence);
+      }
     }
   }
 
-  return medicines;
+  if (currentMed) {
+    medicines.push(currentMed);
+  }
+
+  const result = [];
+  for (const med of medicines) {
+    const key = med.medicine_name.toLowerCase() + '|' + (med.strength || '');
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(med);
+    }
+  }
+
+  return result;
 }
