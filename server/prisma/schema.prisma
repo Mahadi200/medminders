@@ -122,6 +122,8 @@ model ClinicianCredential {
   bmdcNumber         String             @unique // Bangladesh Medical & Dental Council Registration
   specialty          String?
   degrees            String?
+  signingPublicKey   String?            @db.Text // SPKI Base64 / PEM Public Key for ECDSA/Ed25519 verification
+  signingKeyId       String?            // Reference ID for active key version or KMS Key ARN
   verificationStatus VerificationStatus @default(PENDING)
   verifiedAt         DateTime?
   verifiedBy         String?
@@ -332,22 +334,30 @@ model Prescription {
   previousVersionId String?
   previousVersion   Prescription?      @relation("PrescriptionVersions", fields: [previousVersionId], references: [id], onDelete: SetNull)
   nextVersions      Prescription[]     @relation("PrescriptionVersions")
-  isLatestVersion   Boolean            @default(true)
-  signatureHash     String?            // SHA-256 digital signature of prescription payload
-  signedAt          DateTime?
-  diagnosis         String?
-  clinicalNotes     String?            @db.Text
-  verificationToken String?            @unique // Scoped token for pharmacy QR code verification
-  tokenExpiresAt    DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  isLatestVersion       Boolean            @default(true)
+  // Cryptographic Signature & Audit (PKI / KMS Bound)
+  signaturePayloadHash  String?            // SHA-256 hash of canonicalized JSON prescription payload (RFC 8785)
+  signatureBytes        String?            @db.Text // Base64-encoded asymmetric digital signature (ECDSA P-256 / Ed25519)
+  signingKeyId          String?            // Identifier of the active doctor signing key or KMS Key ARN
+  signatureAlgorithm    String?            // e.g., "ES256" or "Ed25519"
+  signedAt              DateTime?          // Prescriber signing timestamp (RFC 3339)
+  diagnosis             String?
+  clinicalNotes         String?            @db.Text
+  // Pharmacy QR Code Token Security (Hashed, Scoped, Revocable)
+  verificationTokenHash String?            @unique // SHA-256 hash of bearer token; raw token never stored
+  tokenExpiresAt        DateTime?          // Token expiry timestamp
+  tokenScope            String?            @default("PHARMACY_DISPENSE") // Scoped permission
+  isTokenRevoked        Boolean            @default(false) // Revocation status
+  tokenRevokedAt        DateTime?          // Revocation timestamp
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   items           PrescriptionItem[]
   alerts          ClinicalAlert[]
   dispenseRecords DispenseRecord[]
 
   @@index([patientId, isLatestVersion])
-  @@index([verificationToken])
+  @@index([verificationTokenHash])
   @@index([organizationId, status])
 }
 

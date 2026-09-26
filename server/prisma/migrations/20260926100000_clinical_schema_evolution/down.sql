@@ -18,6 +18,15 @@ DROP TABLE IF EXISTS "UserRoleAssignment" CASCADE;
 DROP TABLE IF EXISTS "AuditEvent" CASCADE;
 DROP TABLE IF EXISTS "Organization" CASCADE;
 
+-- Revert columns on legacy tables
+ALTER TABLE "PrescriptionScan" DROP COLUMN IF EXISTS "scanStatus";
+ALTER TABLE "Antibiotic" DROP COLUMN IF EXISTS "awareCategory", DROP COLUMN IF EXISTS "whoListingUrl";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "phoneNumber",
+                   DROP COLUMN IF EXISTS "passwordHash",
+                   DROP COLUMN IF EXISTS "legacyRole",
+                   DROP COLUMN IF EXISTS "isActive",
+                   ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'patient';
+
 -- Drop Enums
 DROP TYPE IF EXISTS "AwareCategory" CASCADE;
 DROP TYPE IF EXISTS "DispenseStatus" CASCADE;
