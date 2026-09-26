@@ -48,7 +48,7 @@ function readEnvMap() {
 function writeEnvMap(map, order) {
   const lines = [];
   lines.push('# MedMinders Server Local Environment (Auto-managed, git-ignored)');
-  lines.push('# Updated at: ' + new Date().toISOString());
+  lines.push('# Last updated: ' + new Date().toISOString());
   lines.push('');
 
   for (const key of order) {
@@ -101,32 +101,112 @@ function ensureJwtSecret() {
 }
 
 /**
- * Update or set a key in server/.env safely.
+ * Interactive prompt that reads input with hidden typing (no echoing to terminal/history).
  */
-function setKey(key, value) {
-  if (!key || !value) {
-    console.error('ERROR: Key and value required.');
-    process.exit(1);
-  }
-  const { map, order } = readEnvMap();
-  map.set(key, value);
-  if (!order.includes(key)) {
-    order.push(key);
-  }
-  writeEnvMap(map, order);
-  console.log(`SUCCESS: Key '${key}' safely set/replaced in server/.env without duplicates.`);
+function promptHidden(query) {
+  return new Promise((resolve) => {
+    process.stdout.write(query);
+
+    // Non-interactive / piped input handling
+    if (!process.stdin.isTTY) {
+      let data = '';
+      process.stdin.setEncoding('utf8');
+      process.stdin.on('data', (chunk) => {
+        data += chunk;
+      });
+      process.stdin.on('end', () => {
+        resolve(data.trim());
+      });
+      return;
+    }
+
+    // Interactive TTY raw mode: suppress echo
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
+    let input = '';
+    const onData = (char) => {
+      // Ctrl+C / Ctrl+D: exit safely
+      if (char === '\u0003' || char === '\u0004') {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\nCancelled by user.\n');
+        process.exit(1);
+      }
+
+      // Enter / Return (\r or \n)
+      if (char === '\r' || char === '\n') {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        resolve(input.trim());
+        return;
+      }
+
+      // Backspace (\b or \x7f)
+      if (char === '\u0008' || char === '\x7f') {
+        if (input.length > 0) {
+          input = input.slice(0, -1);
+        }
+        return;
+      }
+
+      // Append characters without echoing to screen
+      input += char;
+    };
+
+    process.stdin.on('data', onData);
+  });
 }
 
-// CLI handler
-const args = process.argv.slice(2);
-const command = args[0];
+/**
+ * Interactive prompt for setting DATABASE_URL safely without command-line argument exposure.
+ */
+async function promptDatabaseUrl() {
+  console.log('=== Secure Local Database URI Entry ===');
+  console.log('Input will be read directly into memory without command-line argument exposure.');
+  
+  ensureJwtSecret();
 
-if (command === '--inspect') {
+  const url = await promptHidden('Enter Supabase Session Pooler DATABASE_URL (typing hidden): ');
+
+  if (!url) {
+    console.error('ERROR: No connection string entered. server/.env was not modified.');
+    process.exit(1);
+  }
+
+  if (!url.startsWith('postgresql://') && !url.startsWith('postgres://')) {
+    console.error('ERROR: Invalid URI format. Must start with postgresql:// or postgres://');
+    process.exit(1);
+  }
+
+  const { map, order } = readEnvMap();
+  map.set('DATABASE_URL', url);
+  if (!order.includes('DATABASE_URL')) {
+    order.push('DATABASE_URL');
+  }
+  writeEnvMap(map, order);
+
+  console.log('\nSUCCESS: DATABASE_URL successfully configured in server/.env (replaced any prior entry without duplicates).');
+  console.log('\n--- Current Local Environment Summary ---');
+  inspectKeys();
+}
+
+// CLI entry point
+const command = process.argv[2];
+
+if (command === '--prompt-db') {
+  promptDatabaseUrl();
+} else if (command === '--inspect') {
   inspectKeys();
 } else if (command === '--init-secret') {
   ensureJwtSecret();
-} else if (command === '--set' && args[1] && args[2]) {
-  setKey(args[1], args[2]);
 } else {
-  console.log('Usage: node manage-env.cjs [--inspect | --init-secret | --set KEY VALUE]');
+  console.log('Usage:');
+  console.log('  node server/scripts/manage-env.cjs --prompt-db    (Securely prompt for DATABASE_URL with hidden typing)');
+  console.log('  node server/scripts/manage-env.cjs --inspect      (Safely list configured keys without values)');
+  console.log('  node server/scripts/manage-env.cjs --init-secret  (Generate unique high-entropy JWT_SECRET)');
 }
