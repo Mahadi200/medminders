@@ -1,77 +1,129 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth/authService.js';
 import { requireAuth } from '../middleware/authGuard.js';
+import { authRateLimiter } from '../middleware/rateLimiter.js';
+import { validateRequest, authValidators } from '../middleware/validate.js';
+import { AuditService } from '../services/audit/auditService.js';
+import { UnauthorizedError, NotFoundError } from '../utils/errors.js';
 
 const router = Router();
 
 /**
- * POST /api/auth/login
- * Authenticates user credentials and issues access JWT + refresh token.
+ * POST /api/v1/auth/login (and /api/auth/login)
+ * Authenticates user credentials, rotates sessions, issues JWTs, and logs audit events.
  */
-router.post('/login', async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
-    }
+router.post(
+  '/login',
+  authRateLimiter.middleware(),
+  validateRequest({ body: authValidators.login }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.login(email, password);
 
-    const result = await AuthService.login(email, password);
-    res.json(result);
-  } catch (err: any) {
-    res.status(401).json({ error: err.message || 'Invalid email or password' });
+      await AuditService.logEvent({
+        actorUserId: result.user.id,
+        targetUserId: result.user.id,
+        action: 'AUTH_LOGIN_SUCCESS',
+        entityType: 'User',
+        entityId: result.user.id,
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.get('user-agent'),
+        metadata: { roles: result.user.roles.map(r => r.role) },
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      await AuditService.logEvent({
+        action: 'AUTH_LOGIN_FAILED',
+        entityType: 'User',
+        entityId: req.body?.email ? '[MASKED_USER]' : 'unknown',
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.get('user-agent'),
+      });
+
+      next(new UnauthorizedError(err.message || 'Invalid email or password'));
+    }
   }
-});
+);
 
 /**
- * POST /api/auth/refresh
- * Rotates refresh token, detecting replay attacks and issuing a new token pair.
+ * POST /api/v1/auth/refresh (and /api/auth/refresh)
+ * Rotates refresh token, detects replay attacks, and issues new token pair.
  */
-router.post('/refresh', async (req: Request, res: Response) => {
-  try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token required' });
-    }
+router.post(
+  '/refresh',
+  authRateLimiter.middleware(),
+  validateRequest({ body: authValidators.refresh }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { refreshToken } = req.body;
+      const newTokens = await AuthService.refreshTokens(refreshToken);
 
-    const newTokens = await AuthService.refreshTokens(refreshToken);
-    res.json(newTokens);
-  } catch (err: any) {
-    res.status(401).json({ error: err.message || 'Invalid or revoked refresh token' });
+      await AuditService.logEvent({
+        action: 'AUTH_TOKEN_ROTATED',
+        entityType: 'RefreshToken',
+        entityId: 'rotated',
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.json(newTokens);
+    } catch (err: any) {
+      await AuditService.logEvent({
+        action: 'AUTH_TOKEN_REPLAY_DETECTED',
+        entityType: 'RefreshToken',
+        entityId: 'rejected',
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.get('user-agent'),
+      });
+
+      next(new UnauthorizedError(err.message || 'Invalid or revoked refresh token'));
+    }
   }
-});
+);
 
 /**
- * POST /api/auth/logout
+ * POST /api/v1/auth/logout (and /api/auth/logout)
  * Revokes refresh token and terminates the session family.
  */
-router.post('/logout', async (req: Request, res: Response) => {
+router.post('/logout', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
     if (refreshToken) {
       await AuthService.logout(refreshToken);
     }
+
+    await AuditService.logEvent({
+      action: 'AUTH_LOGOUT',
+      entityType: 'Session',
+      entityId: 'terminated',
+      ipAddress: req.ip || req.socket.remoteAddress,
+      userAgent: req.get('user-agent'),
+    });
+
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Logout failed' });
+    next(err);
   }
 });
 
 /**
- * GET /api/auth/me
- * Retrieves the currently authenticated user and verified credentials.
+ * GET /api/v1/auth/me (and /api/auth/me)
+ * Retrieves authenticated user profile and roles.
  */
-router.get('/me', requireAuth, async (req: Request, res: Response) => {
+router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return next(new UnauthorizedError('Unauthorized'));
     }
     const profile = await AuthService.getCurrentUser(req.user.id);
     if (!profile) {
-      return res.status(404).json({ error: 'User profile not found' });
+      return next(new NotFoundError('User profile not found'));
     }
     res.json(profile);
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to retrieve profile' });
+    next(err);
   }
 });
 

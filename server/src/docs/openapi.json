@@ -1,0 +1,193 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MedMinders Clinical & Stewardship API",
+    "version": "1.0.0",
+    "description": "Secure, verifiable clinical prescription and antimicrobial stewardship API for Bangladesh healthcare. Enforces zero-trust object-level authorization, cryptographic doctor signatures, hashed pharmacy dispensing verification, and immutable audit trails."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "API v1 Endpoint"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Provide a valid signed MedMinders access JWT."
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "timestamp"],
+            "properties": {
+              "code": { "type": "string", "example": "VALIDATION_ERROR" },
+              "message": { "type": "string", "example": "A valid email address is required" },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              },
+              "requestId": { "type": "string", "format": "uuid" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "dr_attending@test.local" },
+          "password": { "type": "string", "format": "password", "minLength": 6, "example": "securePassword123" }
+        }
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" },
+          "expiresIn": { "type": "number", "example": 900 }
+        }
+      },
+      "PrescriptionResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "patientId": { "type": "string" },
+          "prescriberId": { "type": "string" },
+          "status": { "type": "string", "enum": ["DRAFT_UNREVIEWED", "CLINICIAN_REVIEWED", "SIGNED", "DISPENSED", "CANCELLED"] },
+          "items": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user credentials",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Authenticated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenResponse" } } } },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "429": { "description": "Rate limit exceeded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rotate refresh token pair",
+        "responses": {
+          "200": { "description": "Tokens rotated" },
+          "401": { "description": "Invalid or revoked token" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get authenticated user profile and roles",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/prescriptions/upload": {
+      "post": {
+        "summary": "Upload prescription file (image/pdf)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "File uploaded" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/prescriptions/scan": {
+      "post": {
+        "summary": "Perform OCR analysis and antibiotic safety check",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Scan complete (Always DRAFT_UNREVIEWED)" }
+        }
+      }
+    },
+    "/prescriptions/{id}": {
+      "get": {
+        "summary": "Retrieve prescription by ID (Object-level authorized)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Prescription record", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PrescriptionResponse" } } } },
+          "403": { "description": "Forbidden - requires relationship or consent" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/prescriptions/{id}/sign": {
+      "post": {
+        "summary": "Doctor asymmetric digital signature of prescription",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Prescription signed" },
+          "403": { "description": "Doctor verification required" }
+        }
+      }
+    },
+    "/prescriptions/verify/{token}": {
+      "get": {
+        "summary": "Pharmacy token verification (Data minimized)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Verified prescription items" },
+          "403": { "description": "Invalid or revoked token" }
+        }
+      }
+    },
+    "/files/{fileId}": {
+      "get": {
+        "summary": "Authorized medical file streaming",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "File stream" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "summary": "Liveness probe",
+        "responses": { "200": { "description": "Process is alive" } }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness probe",
+        "responses": {
+          "200": { "description": "Database is ready" },
+          "503": { "description": "Database unavailable" }
+        }
+      }
+    }
+  }
+}
