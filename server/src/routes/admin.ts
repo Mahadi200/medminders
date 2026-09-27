@@ -4,6 +4,7 @@ import { importAntibioticsFromXlsx } from '../services/antibiotics/xlsxImport.js
 import { requireAdmin } from '../middleware/authGuard.js';
 import { AuditService } from '../services/audit/auditService.js';
 import { ValidationError } from '../utils/errors.js';
+import { ProfessionalVerificationService } from '../services/verification/professionalVerificationService.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -50,5 +51,110 @@ router.post(
     }
   }
 );
+
+/**
+ * POST /api/v1/admin/verification/clinician
+ * Admin manual review of Doctor BMDC credentials with required evidence.
+ */
+router.post('/verification/clinician', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { clinicianUserId, decision, evidenceNotes, evidenceDocumentUrl, expiresAt } = req.body;
+    if (!clinicianUserId || !decision) {
+      return next(new ValidationError('clinicianUserId and decision are required'));
+    }
+
+    const updated = await ProfessionalVerificationService.reviewClinicianCredential({
+      adminUserId: req.user!.id,
+      clinicianUserId,
+      decision,
+      evidenceNotes,
+      evidenceDocumentUrl,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+    });
+
+    res.json({ success: true, credential: updated });
+  } catch (err: any) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/v1/admin/verification/pharmacist
+ * Admin manual review of Pharmacist Council credentials with required evidence.
+ */
+router.post('/verification/pharmacist', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { pharmacistUserId, decision, evidenceNotes, evidenceDocumentUrl, expiresAt } = req.body;
+    if (!pharmacistUserId || !decision) {
+      return next(new ValidationError('pharmacistUserId and decision are required'));
+    }
+
+    const updated = await ProfessionalVerificationService.reviewPharmacistCredential({
+      adminUserId: req.user!.id,
+      pharmacistUserId,
+      decision,
+      evidenceNotes,
+      evidenceDocumentUrl,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+    });
+
+    res.json({ success: true, credential: updated });
+  } catch (err: any) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/v1/admin/verification/organization
+ * Register a healthcare or pharmacy organization.
+ */
+router.post('/verification/organization', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, type, regNumber, address, phone, licenseEvidenceUrl } = req.body;
+    if (!name || !type || !regNumber) {
+      return next(new ValidationError('name, type, and regNumber are required'));
+    }
+
+    const org = await ProfessionalVerificationService.registerOrganization({
+      adminUserId: req.user!.id,
+      name,
+      type,
+      regNumber,
+      address,
+      phone,
+      licenseEvidenceUrl,
+    });
+
+    res.json({ success: true, organization: org });
+  } catch (err: any) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/v1/admin/verification/affiliate
+ * Affiliate staff member with hospital or pharmacy.
+ */
+router.post('/verification/affiliate', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, organizationId, role, isVerified, notes } = req.body;
+    if (!userId || !organizationId || !role) {
+      return next(new ValidationError('userId, organizationId, and role are required'));
+    }
+
+    const assignment = await ProfessionalVerificationService.affiliateStaffMember({
+      adminUserId: req.user!.id,
+      userId,
+      organizationId,
+      role,
+      isVerified: Boolean(isVerified),
+      notes,
+    });
+
+    res.json({ success: true, assignment });
+  } catch (err: any) {
+    next(err);
+  }
+});
 
 export const adminRouter = router;

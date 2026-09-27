@@ -40,8 +40,8 @@ export async function evaluateClinicalAccess(ctx: AuthorizationContext): Promise
   }
 
   // Rule 3: Pharmacy Staff Scope Limit
-  // Pharmacy staff cannot browse or read full patient chart/consultations directly.
-  const isPharmacyStaff = userRoles.some(r => r.role === 'PHARMACY_STAFF');
+  // Pharmacy staff / pharmacists cannot browse or read full patient chart/consultations directly.
+  const isPharmacyStaff = userRoles.some(r => r.role === 'PHARMACY_STAFF' || r.role === 'PHARMACIST');
   if (isPharmacyStaff) {
     return {
       allowed: false,

@@ -23,6 +23,9 @@ function getJwtSecret(): string {
   return secret;
 }
 
+export const DEFAULT_JWT_ISSUER = 'medminders-api';
+export const DEFAULT_JWT_AUDIENCE = 'medminders-client';
+
 export interface JwtPayload {
   sub: string; // User ID
   email: string;
@@ -35,6 +38,8 @@ export interface JwtPayload {
     bmdcNumber: string;
     isVerified: boolean;
   };
+  iss?: string; // Issuer
+  aud?: string; // Audience
   jti: string; // Unique token ID
   iat: number;
   exp: number;
@@ -98,13 +103,20 @@ function base64UrlDecode(input: string): string {
 }
 
 /**
- * Sign a JWT using HMAC-SHA256.
+ * Sign a JWT using HMAC-SHA256 with issuer and audience claims.
  */
-export function signJwt(payload: Omit<JwtPayload, 'iat' | 'exp' | 'jti'>, expiresInSeconds = 900): string {
+export function signJwt(
+  payload: Omit<JwtPayload, 'iat' | 'exp' | 'jti' | 'iss' | 'aud'>,
+  expiresInSeconds = 900,
+  issuer = process.env.JWT_ISSUER || DEFAULT_JWT_ISSUER,
+  audience = process.env.JWT_AUDIENCE || DEFAULT_JWT_AUDIENCE
+): string {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const fullPayload: JwtPayload = {
     ...payload,
+    iss: issuer,
+    aud: audience,
     jti: crypto.randomBytes(16).toString('hex'),
     iat: now,
     exp: now + expiresInSeconds,
@@ -121,9 +133,16 @@ export function signJwt(payload: Omit<JwtPayload, 'iat' | 'exp' | 'jti'>, expire
 }
 
 /**
- * Verify a JWT using HMAC-SHA256 and validate expiration.
+ * Verify a JWT using HMAC-SHA256 and validate expiration, issuer, and audience.
  */
-export function verifyJwt(token: string): JwtPayload {
+export function verifyJwt(
+  token: string,
+  options?: {
+    expectedIssuer?: string;
+    expectedAudience?: string;
+    clockToleranceSeconds?: number;
+  }
+): JwtPayload {
   const parts = token.split('.');
   if (parts.length !== 3) {
     throw new Error('Malformed token structure');
@@ -144,8 +163,20 @@ export function verifyJwt(token: string): JwtPayload {
 
   const payload: JwtPayload = JSON.parse(base64UrlDecode(encodedPayload));
   const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < now) {
+  const clockSkew = options?.clockToleranceSeconds || 10;
+
+  if (payload.exp && payload.exp < (now - clockSkew)) {
     throw new Error('Token expired');
+  }
+
+  const expectedIssuer = options?.expectedIssuer || process.env.JWT_ISSUER || DEFAULT_JWT_ISSUER;
+  if (payload.iss && payload.iss !== expectedIssuer) {
+    throw new Error(`Invalid token issuer: expected ${expectedIssuer}`);
+  }
+
+  const expectedAudience = options?.expectedAudience || process.env.JWT_AUDIENCE || DEFAULT_JWT_AUDIENCE;
+  if (payload.aud && payload.aud !== expectedAudience) {
+    throw new Error(`Invalid token audience: expected ${expectedAudience}`);
   }
 
   return payload;

@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/authGuard.js';
 import { authRateLimiter } from '../middleware/rateLimiter.js';
 import { validateRequest, authValidators } from '../middleware/validate.js';
 import { AuditService } from '../services/audit/auditService.js';
-import { UnauthorizedError, NotFoundError } from '../utils/errors.js';
+import { UnauthorizedError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.post(
         entityId: result.user.id,
         ipAddress: req.ip || req.socket.remoteAddress,
         userAgent: req.get('user-agent'),
-        metadata: { roles: result.user.roles.map(r => r.role) },
+        metadata: { roles: result.user.roles ? result.user.roles.map(r => r.role) : [] },
       });
 
       res.json(result);
@@ -46,6 +46,42 @@ router.post(
     }
   }
 );
+
+/**
+ * POST /api/v1/auth/mfa/verify (and /api/auth/mfa/verify)
+ * Complete MFA challenge for privileged healthcare roles.
+ */
+router.post('/mfa/verify', authRateLimiter.middleware(), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { challengeId, code, userId } = req.body;
+    if (!challengeId || !code || !userId) {
+      return next(new ValidationError('challengeId, code, and userId are required'));
+    }
+    const result = await AuthService.verifyMfaLogin(challengeId, code, userId);
+
+    await AuditService.logEvent({
+      actorUserId: userId,
+      targetUserId: userId,
+      action: 'AUTH_MFA_SUCCESS',
+      entityType: 'User',
+      entityId: userId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      userAgent: req.get('user-agent'),
+      failClosed: true,
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    await AuditService.logEvent({
+      action: 'AUTH_MFA_FAILED',
+      entityType: 'User',
+      entityId: req.body?.userId || 'unknown',
+      ipAddress: req.ip || req.socket.remoteAddress,
+      userAgent: req.get('user-agent'),
+    });
+    next(new UnauthorizedError(err.message || 'MFA verification failed'));
+  }
+});
 
 /**
  * POST /api/v1/auth/refresh (and /api/auth/refresh)

@@ -129,6 +129,14 @@ export class TokenService {
   }
 
   /**
+   * Revoke a specific device session family.
+   */
+  static async revokeDeviceSession(familyId: string): Promise<void> {
+    const store = getDataStore();
+    await store.revokeTokenFamily(familyId);
+  }
+
+  /**
    * Verify an incoming access token.
    */
   static verifyAccessToken(token: string): JwtPayload {

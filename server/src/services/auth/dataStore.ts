@@ -509,20 +509,126 @@ export class PrismaClinicalDataStore implements IClinicalDataStore {
   }
 
   async saveRefreshToken(token: Omit<RefreshTokenRecord, 'id' | 'createdAt'>): Promise<RefreshTokenRecord> {
-    // In production without live RefreshToken table yet, we throw or write to session store
-    throw new Error('PostgreSQL database required for live production refresh token storage');
+    const payload = {
+      userId: token.userId,
+      familyId: token.familyId,
+      isRevoked: token.isRevoked,
+      expiresAt: token.expiresAt.toISOString(),
+      rotatedAt: token.rotatedAt ? token.rotatedAt.toISOString() : null,
+    };
+
+    const record = await this.prisma.idempotencyRecord.upsert({
+      where: {
+        idempotencyKey_endpoint: {
+          idempotencyKey: token.tokenHash,
+          endpoint: 'AUTH_SESSION',
+        },
+      },
+      update: {
+        requestHash: token.familyId,
+        responseStatus: token.isRevoked ? 1 : 0,
+        responseBodyJson: JSON.stringify(payload),
+        lockedUntil: token.expiresAt,
+      },
+      create: {
+        idempotencyKey: token.tokenHash,
+        endpoint: 'AUTH_SESSION',
+        requestHash: token.familyId,
+        responseStatus: token.isRevoked ? 1 : 0,
+        responseBodyJson: JSON.stringify(payload),
+        lockedUntil: token.expiresAt,
+      },
+    });
+
+    return {
+      id: record.id,
+      userId: token.userId,
+      tokenHash: token.tokenHash,
+      familyId: token.familyId,
+      isRevoked: token.isRevoked,
+      expiresAt: token.expiresAt,
+      createdAt: record.createdAt,
+      rotatedAt: token.rotatedAt,
+    };
   }
 
-  async getRefreshTokenByHash(_hash: string): Promise<RefreshTokenRecord | null> {
-    throw new Error('PostgreSQL database required for live production refresh token retrieval');
+  async getRefreshTokenByHash(hash: string): Promise<RefreshTokenRecord | null> {
+    const record = await this.prisma.idempotencyRecord.findUnique({
+      where: {
+        idempotencyKey_endpoint: {
+          idempotencyKey: hash,
+          endpoint: 'AUTH_SESSION',
+        },
+      },
+    });
+
+    if (!record || !record.responseBodyJson) return null;
+
+    try {
+      const data = JSON.parse(record.responseBodyJson);
+      return {
+        id: record.id,
+        userId: data.userId,
+        tokenHash: record.idempotencyKey,
+        familyId: record.requestHash || data.familyId,
+        isRevoked: record.responseStatus === 1 || data.isRevoked === true,
+        expiresAt: new Date(record.lockedUntil),
+        createdAt: record.createdAt,
+        rotatedAt: data.rotatedAt ? new Date(data.rotatedAt) : null,
+      };
+    } catch {
+      return null;
+    }
   }
 
-  async revokeRefreshToken(_hash: string): Promise<void> {
-    throw new Error('PostgreSQL database required for live production refresh token revocation');
+  async revokeRefreshToken(hash: string): Promise<void> {
+    const record = await this.prisma.idempotencyRecord.findUnique({
+      where: {
+        idempotencyKey_endpoint: {
+          idempotencyKey: hash,
+          endpoint: 'AUTH_SESSION',
+        },
+      },
+    });
+
+    if (record && record.responseBodyJson) {
+      let data: any = {};
+      try { data = JSON.parse(record.responseBodyJson); } catch {}
+      data.isRevoked = true;
+      data.rotatedAt = new Date().toISOString();
+
+      await this.prisma.idempotencyRecord.update({
+        where: { id: record.id },
+        data: {
+          responseStatus: 1, // Revoked
+          responseBodyJson: JSON.stringify(data),
+        },
+      });
+    }
   }
 
-  async revokeTokenFamily(_familyId: string): Promise<void> {
-    throw new Error('PostgreSQL database required for live production token family revocation');
+  async revokeTokenFamily(familyId: string): Promise<void> {
+    const records = await this.prisma.idempotencyRecord.findMany({
+      where: {
+        endpoint: 'AUTH_SESSION',
+        requestHash: familyId,
+      },
+    });
+
+    for (const rec of records) {
+      let data: any = {};
+      try { data = JSON.parse(rec.responseBodyJson || '{}'); } catch {}
+      data.isRevoked = true;
+      data.rotatedAt = new Date().toISOString();
+
+      await this.prisma.idempotencyRecord.update({
+        where: { id: rec.id },
+        data: {
+          responseStatus: 1,
+          responseBodyJson: JSON.stringify(data),
+        },
+      });
+    }
   }
 }
 
@@ -1122,7 +1228,10 @@ let storeInstance: IClinicalDataStore;
 
 export function getDataStore(): IClinicalDataStore {
   if (!storeInstance) {
-    if (process.env.NODE_ENV === 'production' && process.env.USE_SIMULATED_STORE !== 'true') {
+    if (
+      (process.env.NODE_ENV === 'production' || process.env.USE_REAL_POSTGRES === 'true') &&
+      process.env.USE_SIMULATED_STORE !== 'true'
+    ) {
       storeInstance = new PrismaClinicalDataStore();
     } else {
       storeInstance = new InMemoryClinicalDataStore();
@@ -1133,4 +1242,8 @@ export function getDataStore(): IClinicalDataStore {
 
 export function setTestDataStore(store: IClinicalDataStore) {
   storeInstance = store;
+}
+
+export function resetDataStore(): void {
+  storeInstance = undefined as any;
 }

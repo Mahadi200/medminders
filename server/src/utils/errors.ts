@@ -73,3 +73,9 @@ export class DatabaseError extends AppError {
     super(message, 503, 'DATABASE_UNAVAILABLE');
   }
 }
+
+export class AuditPersistenceError extends AppError {
+  constructor(message = 'Critical audit log failed to persist. Operation aborted for compliance and security.') {
+    super(message, 503, 'AUDIT_PERSISTENCE_FAILED');
+  }
+}

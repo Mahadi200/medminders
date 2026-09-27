@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger, sanitizeLogData } from '../../utils/logger.js';
+import { AuditPersistenceError } from '../../utils/errors.js';
 
 export interface AuditLogOptions {
   actorUserId?: string | null;
@@ -11,20 +12,40 @@ export interface AuditLogOptions {
   ipAddress?: string | null;
   userAgent?: string | null;
   metadata?: Record<string, any>;
+  failClosed?: boolean; // When true, database failure aborts the operation
 }
+
+// Sensitive operations that strictly mandate fail-closed audit trails
+const FAIL_CLOSED_ACTIONS = [
+  'PHI_FILE_STREAMED',
+  'PHI_PRESCRIPTION_READ',
+  'PRESCRIPTION_SIGN',
+  'AUTH_LOGIN_SUCCESS',
+  'CLINICIAN_CREDENTIAL_VERIFIED',
+  'PHARMACIST_CREDENTIAL_VERIFIED',
+];
 
 export class AuditService {
   private static prisma: PrismaClient = new PrismaClient();
 
   /**
+   * For testing audit failure policies
+   */
+  static setPrismaInstance(customPrisma: PrismaClient): void {
+    this.prisma = customPrisma;
+  }
+
+  /**
    * Logs a security or clinical audit event to the PostgreSQL database AuditEvent table.
-   * Ensures metadata is automatically sanitized of raw passwords, tokens, or plaintext PHI.
+   * If failClosed is true or the action is a sensitive PHI/security operation, any database write
+   * failure halts the operation with AuditPersistenceError (HTTP 503).
    */
   static async logEvent(opts: AuditLogOptions): Promise<void> {
+    const isSensitive = opts.failClosed || FAIL_CLOSED_ACTIONS.includes(opts.action);
+
     try {
       const sanitizedMeta = opts.metadata ? JSON.stringify(sanitizeLogData(opts.metadata)) : null;
 
-      // In production and testing with live DB, persist to AuditEvent table
       if (process.env.DATABASE_URL) {
         await this.prisma.auditEvent.create({
           data: {
@@ -49,13 +70,19 @@ export class AuditService {
         entityId: opts.entityId,
       });
     } catch (err: any) {
-      // Non-blocking log write: audit failure should be alerted without destroying the primary user transaction
-      logger.error('Failed to persist AuditEvent record', {
+      logger.error('CRITICAL: AuditEvent persistence failure', {
         error: err.message || String(err),
         action: opts.action,
         entityType: opts.entityType,
         entityId: opts.entityId,
+        isSensitive,
       });
+
+      if (isSensitive) {
+        throw new AuditPersistenceError(
+          `Audit write failed for sensitive action '${opts.action}'. Operation aborted under HIPAA/GDPR clinical safety fail-closed policy.`
+        );
+      }
     }
   }
 }

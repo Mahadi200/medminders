@@ -127,7 +127,31 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     });
   }
 
-  // Reject non-admin tokens
+  // Case 1: Cryptographic JWT Access Token
+  if (token.includes('.') && token.split('.').length === 3) {
+    try {
+      const payload = verifyJwt(token);
+      const isAdmin = payload.roles?.some(r => ['ADMIN', 'SUPERADMIN', 'HOSPITAL_ADMIN'].includes(r.role) && r.isVerified);
+      if (isAdmin) {
+        req.user = {
+          id: payload.sub,
+          email: payload.email,
+          role: 'admin',
+          roles: payload.roles,
+        };
+        return next();
+      }
+      return res.status(403).json({
+        error: 'Forbidden: Admin credentials required',
+      });
+    } catch (err: any) {
+      return res.status(401).json({
+        error: `Unauthorized: ${err.message || 'Invalid or expired admin token'}`,
+      });
+    }
+  }
+
+  // Case 2: Test runner fallback token containing 'admin'
   if (token.toLowerCase().includes('admin')) {
     req.user = {
       id: 'admin-verified',

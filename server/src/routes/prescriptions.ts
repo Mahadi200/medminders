@@ -25,7 +25,7 @@ router.post('/upload', requireAuth, uploadRateLimiter.middleware(), uploadMiddle
 router.post('/scan', requireAuth, scanRateLimiter.middleware(), validateRequest({ body: prescriptionValidators.scan }), scanPrescription);
 
 // Scoped Pharmacy Verification (Data Minimization: returns only items and prescriber credentials)
-router.get('/verify/:token', requireAuth, requireVerifiedRole(['PHARMACY_STAFF', 'DOCTOR']), verifyPharmacyPrescriptionToken);
+router.get('/verify/:token', requireAuth, requireVerifiedRole(['PHARMACY_STAFF', 'PHARMACIST', 'DOCTOR']), verifyPharmacyPrescriptionToken);
 
 // Clinician Digital Signature
 router.post('/:id/sign', requireAuth, requireVerifiedRole(['DOCTOR']), validateRequest({ body: prescriptionValidators.sign }), signPrescription);
