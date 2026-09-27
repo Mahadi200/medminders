@@ -91,7 +91,11 @@ async function inspect() {
     console.log('\nInspection complete. Database state verified.');
   } catch (err) {
     console.error('\nDatabase inspection failed:');
-    console.error(err.message || err);
+    const msg = (err && err.message) ? err.message : String(err);
+    const redacted = msg
+      .replace(/postgresql:\/\/[^@\s]+@/gi, 'postgresql://***:***@')
+      .replace(/postgres:\/\/[^@\s]+@/gi, 'postgres://***:***@');
+    console.error(redacted);
     process.exit(1);
   } finally {
     await prisma.$disconnect();
