@@ -1,5 +1,6 @@
--- Reversible Down Migration: Rollback 20260926100000_clinical_schema_evolution
--- Drops newly added tables in reverse topological order, preserving legacy data
+-- Reversible Down Migration: Rollback 20260927000000_init_clinical_schema
+-- Confined exclusively to MedMinders objects in public schema.
+-- NEVER modifies or drops auth, storage, realtime, vault, extensions, or the public schema itself.
 
 DROP TABLE IF EXISTS "DispenseItem" CASCADE;
 DROP TABLE IF EXISTS "DispenseRecord" CASCADE;
@@ -15,17 +16,12 @@ DROP TABLE IF EXISTS "PatientProfile" CASCADE;
 DROP TABLE IF EXISTS "ClinicianCredential" CASCADE;
 DROP TABLE IF EXISTS "PharmacistCredential" CASCADE;
 DROP TABLE IF EXISTS "UserRoleAssignment" CASCADE;
+DROP TABLE IF EXISTS "PrescriptionScan" CASCADE;
+DROP TABLE IF EXISTS "PrescriptionUpload" CASCADE;
+DROP TABLE IF EXISTS "Antibiotic" CASCADE;
 DROP TABLE IF EXISTS "AuditEvent" CASCADE;
 DROP TABLE IF EXISTS "Organization" CASCADE;
-
--- Revert columns on legacy tables
-ALTER TABLE "PrescriptionScan" DROP COLUMN IF EXISTS "scanStatus";
-ALTER TABLE "Antibiotic" DROP COLUMN IF EXISTS "awareCategory", DROP COLUMN IF EXISTS "whoListingUrl";
-ALTER TABLE "User" DROP COLUMN IF EXISTS "phoneNumber",
-                   DROP COLUMN IF EXISTS "passwordHash",
-                   DROP COLUMN IF EXISTS "legacyRole",
-                   DROP COLUMN IF EXISTS "isActive",
-                   ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'patient';
+DROP TABLE IF EXISTS "User" CASCADE;
 
 -- Drop Enums
 DROP TYPE IF EXISTS "AwareCategory" CASCADE;

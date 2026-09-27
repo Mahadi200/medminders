@@ -37,20 +37,6 @@ CREATE TYPE "DispenseStatus" AS ENUM ('PARTIAL', 'COMPLETED', 'REJECTED');
 -- CreateEnum
 CREATE TYPE "AwareCategory" AS ENUM ('ACCESS', 'WATCH', 'RESERVE', 'UNCLASSIFIED');
 
--- AlterTable
-ALTER TABLE "User" DROP COLUMN "role",
-ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "legacyRole" TEXT,
-ADD COLUMN     "passwordHash" TEXT,
-ADD COLUMN     "phoneNumber" TEXT;
-
--- AlterTable
-ALTER TABLE "PrescriptionScan" ADD COLUMN     "scanStatus" TEXT NOT NULL DEFAULT 'DRAFT_UNREVIEWED';
-
--- AlterTable
-ALTER TABLE "Antibiotic" ADD COLUMN     "awareCategory" "AwareCategory" NOT NULL DEFAULT 'UNCLASSIFIED',
-ADD COLUMN     "whoListingUrl" TEXT;
-
 -- CreateTable
 CREATE TABLE "Organization" (
     "id" TEXT NOT NULL,
@@ -64,6 +50,20 @@ CREATE TABLE "Organization" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "phoneNumber" TEXT,
+    "passwordHash" TEXT,
+    "legacyRole" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -198,6 +198,33 @@ CREATE TABLE "Consultation" (
 );
 
 -- CreateTable
+CREATE TABLE "PrescriptionUpload" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "fileType" TEXT NOT NULL,
+    "fileUrl" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PrescriptionUpload_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PrescriptionScan" (
+    "id" TEXT NOT NULL,
+    "uploadId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "ocrText" TEXT NOT NULL,
+    "ocrConfidence" DOUBLE PRECISION,
+    "medicinesJson" TEXT NOT NULL,
+    "antibioticsJson" TEXT NOT NULL,
+    "alertsJson" TEXT,
+    "scanStatus" TEXT NOT NULL DEFAULT 'DRAFT_UNREVIEWED',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PrescriptionScan_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Prescription" (
     "id" TEXT NOT NULL,
     "organizationId" TEXT,
@@ -313,6 +340,24 @@ CREATE TABLE "IdempotencyRecord" (
 );
 
 -- CreateTable
+CREATE TABLE "Antibiotic" (
+    "id" TEXT NOT NULL,
+    "genericName" TEXT NOT NULL,
+    "group" TEXT,
+    "brandNames" TEXT[],
+    "companies" TEXT[],
+    "ageConsiderations" TEXT,
+    "doseDuration" TEXT,
+    "sideEffects" TEXT,
+    "awareCategory" "AwareCategory" NOT NULL DEFAULT 'UNCLASSIFIED',
+    "whoListingUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Antibiotic_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "AuditEvent" (
     "id" TEXT NOT NULL,
     "actorUserId" TEXT,
@@ -331,6 +376,12 @@ CREATE TABLE "AuditEvent" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Organization_regNumber_key" ON "Organization"("regNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
 
 -- CreateIndex
 CREATE INDEX "UserRoleAssignment_userId_role_idx" ON "UserRoleAssignment"("userId", "role");
@@ -370,6 +421,12 @@ CREATE INDEX "ConsentGrant_patientId_status_expiresAt_idx" ON "ConsentGrant"("pa
 
 -- CreateIndex
 CREATE INDEX "ConsentGrant_granteeUserId_status_idx" ON "ConsentGrant"("granteeUserId", "status");
+
+-- CreateIndex
+CREATE INDEX "PrescriptionScan_userId_idx" ON "PrescriptionScan"("userId");
+
+-- CreateIndex
+CREATE INDEX "PrescriptionScan_uploadId_idx" ON "PrescriptionScan"("uploadId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Prescription_verificationTokenHash_key" ON "Prescription"("verificationTokenHash");
@@ -417,6 +474,12 @@ CREATE INDEX "IdempotencyRecord_lockedUntil_idx" ON "IdempotencyRecord"("lockedU
 CREATE UNIQUE INDEX "IdempotencyRecord_idempotencyKey_endpoint_key" ON "IdempotencyRecord"("idempotencyKey", "endpoint");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Antibiotic_genericName_key" ON "Antibiotic"("genericName");
+
+-- CreateIndex
+CREATE INDEX "Antibiotic_genericName_idx" ON "Antibiotic"("genericName");
+
+-- CreateIndex
 CREATE INDEX "AuditEvent_occurredAt_idx" ON "AuditEvent"("occurredAt");
 
 -- CreateIndex
@@ -427,9 +490,6 @@ CREATE INDEX "AuditEvent_targetUserId_idx" ON "AuditEvent"("targetUserId");
 
 -- CreateIndex
 CREATE INDEX "AuditEvent_organizationId_occurredAt_idx" ON "AuditEvent"("organizationId", "occurredAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
 
 -- AddForeignKey
 ALTER TABLE "UserRoleAssignment" ADD CONSTRAINT "UserRoleAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -478,6 +538,15 @@ ALTER TABLE "Consultation" ADD CONSTRAINT "Consultation_patientId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "Consultation" ADD CONSTRAINT "Consultation_clinicianId_fkey" FOREIGN KEY ("clinicianId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PrescriptionUpload" ADD CONSTRAINT "PrescriptionUpload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PrescriptionScan" ADD CONSTRAINT "PrescriptionScan_uploadId_fkey" FOREIGN KEY ("uploadId") REFERENCES "PrescriptionUpload"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PrescriptionScan" ADD CONSTRAINT "PrescriptionScan_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Prescription" ADD CONSTRAINT "Prescription_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;

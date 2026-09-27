@@ -105,13 +105,13 @@ describe('PostgreSQL Migration DDL & Database-Backed Invalid Write Tests', () =>
     // 1. Verify existence of the exact migration.sql file
     const migrationPath = path.join(
       process.cwd(),
-      'prisma/migrations/20260926100000_clinical_schema_evolution/migration.sql'
+      'prisma/migrations/20260927000000_init_clinical_schema/migration.sql'
     );
     expect(fs.existsSync(migrationPath)).toBe(true);
     migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
     // 2. Assert key DDL constructs exist in the migration SQL
-    expect(migrationSql).toContain('ALTER TABLE "User"');
+    expect(migrationSql).toContain('CREATE TABLE "User"');
     expect(migrationSql).toContain('CREATE TABLE "Prescription"');
     expect(migrationSql).toContain('CREATE TABLE "PrescriptionItem"');
     expect(migrationSql).toContain('CREATE TABLE "DispenseRecord"');
