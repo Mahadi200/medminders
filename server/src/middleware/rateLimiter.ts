@@ -180,3 +180,9 @@ export const scanRateLimiter = new InMemoryRateLimiter({
   max: 30,
   message: 'Prescription scan rate limit exceeded.',
 });
+
+export const catalogueAdminRateLimiter = new InMemoryRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Admin catalogue management rate limit reached. Please wait before retrying.',
+});

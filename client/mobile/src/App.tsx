@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MobileCatalogueService, CatalogueVersionMetadata } from './services/catalogueService';
 
 /**
  * MedMinders Mobile Application Entry (Expo / React Native)
@@ -22,6 +23,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  *    is designed for Slice 5.
  * 3. EMERGENCY RED-FLAG ESCALATION: High-contrast urgent care card with 999 link.
  * 4. BANGLA-FIRST ACCESSIBILITY with Asia/Dhaka localized date/time.
+ * 5. SERVER CATALOGUE SYNCHRONIZATION: Displays verified catalogue version, WHO reviewer,
+ *    and synchronization freshness with adult reference disclaimers.
  */
 
 // Storage keys for NON-SENSITIVE settings ONLY
@@ -31,6 +34,7 @@ const SETTINGS_THEME_KEY = '@medminders_settings_theme';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'education' | 'emergency'>('home');
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
+  const [catalogueMeta, setCatalogueMeta] = useState<CatalogueVersionMetadata | null>(null);
 
   useEffect(() => {
     // Load non-sensitive preferences from AsyncStorage
@@ -45,6 +49,11 @@ export default function App() {
       }
     }
     loadPreferences();
+
+    // Fetch server catalogue version & freshness
+    MobileCatalogueService.fetchVersion()
+      .then(meta => setCatalogueMeta(meta))
+      .catch(() => {});
   }, []);
 
   const toggleLanguage = async () => {
@@ -77,6 +86,22 @@ export default function App() {
         <TouchableOpacity style={styles.langButton} onPress={toggleLanguage}>
           <Text style={styles.langButtonText}>{language === 'bn' ? 'English' : 'বাংলা'}</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Catalogue Sync Banner */}
+      <View style={styles.syncBanner}>
+        <Text style={styles.syncBannerText}>
+          📚 {language === 'bn' ? 'ক্যাটালগ:' : 'Catalogue:'} {catalogueMeta?.version || 'v2026.09.1'}
+          {catalogueMeta?.isOfflineFallback
+            ? language === 'bn' ? ' (অফলাইন)' : ' (Offline)'
+            : language === 'bn' ? ' (সার্ভার লাইভ)' : ' (Live API)'}
+        </Text>
+        <Text style={styles.syncBannerTime}>
+          {language === 'bn' ? 'সিঙ্ক:' : 'Synced:'}{' '}
+          {catalogueMeta?.freshnessTimestamp
+            ? new Date(catalogueMeta.freshnessTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '--:--'}
+        </Text>
       </View>
 
       {/* Main Content Area */}
@@ -169,15 +194,51 @@ export default function App() {
         )}
 
         {activeTab === 'education' && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {language === 'bn' ? 'অ্যান্টিবায়োটিক সচেতনতা ও AWaRe' : 'Antibiotic Stewardship & AWaRe'}
-            </Text>
-            <Text style={styles.cardBody}>
-              {language === 'bn'
-                ? '১. অ্যান্টিবায়োটিকের সম্পূর্ণ কোর্স সম্পন্ন করুন—মাঝে বন্ধ করবেন না।\n২. WHO AWaRe হলো চিকিৎসকদের জন্য রোগজীবাণু প্রতিরোধী গাইডলাইন, এটি রোগীর কোনো রোগ নির্ণয় নয়।\n৩. চিকিৎসকের পরামর্শ ছাড়া পরিবারের অন্য কারো সাথে অ্যান্টিবায়োটিক শেয়ার করবেন না।'
-                : '1. Complete full antibiotic course. Do not stop midway.\n2. WHO AWaRe is a public health stewardship classification, not a patient diagnosis.\n3. Never share antibiotics with family or friends without a doctor.'}
-            </Text>
+          <View>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                {language === 'bn' ? 'অ্যান্টিবায়োটিক সচেতনতা ও AWaRe' : 'Antibiotic Stewardship & AWaRe'}
+              </Text>
+              <Text style={styles.cardBody}>
+                {language === 'bn'
+                  ? '১. অ্যান্টিবায়োটিকের সম্পূর্ণ কোর্স সম্পন্ন করুন—মাঝে বন্ধ করবেন না।\n২. WHO AWaRe হলো চিকিৎসকদের জন্য রোগজীবাণু প্রতিরোধী গাইডলাইন, এটি রোগীর কোনো রোগ নির্ণয় নয়।\n৩. চিকিৎসকের পরামর্শ ছাড়া পরিবারের অন্য কারো সাথে অ্যান্টিবায়োটিক শেয়ার করবেন না।'
+                  : '1. Complete full antibiotic course. Do not stop midway.\n2. WHO AWaRe is a public health stewardship classification, not a patient diagnosis.\n3. Never share antibiotics with family or friends without a doctor.'}
+              </Text>
+            </View>
+
+            {/* Versioned Catalogue Metadata Card */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                {language === 'bn' ? 'যাচাইকৃত ঔষধ ও অ্যান্টিবায়োটিক ক্যাটালগ' : 'Verified Medicine Catalogue'}
+              </Text>
+              <View style={styles.metadataRow}>
+                <Text style={styles.metadataLabel}>{language === 'bn' ? 'সংস্করণ (Release):' : 'Version:'}</Text>
+                <Text style={styles.metadataValue}>{catalogueMeta?.version || 'v2026.09.1'}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Text style={styles.metadataLabel}>{language === 'bn' ? 'উৎস (Source):' : 'Source:'}</Text>
+                <Text style={styles.metadataValue}>{catalogueMeta?.source || 'WHO AWaRe 2024 / DGDA'}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Text style={styles.metadataLabel}>{language === 'bn' ? 'পর্যালোচক (Reviewer):' : 'Reviewer:'}</Text>
+                <Text style={styles.metadataValue}>{catalogueMeta?.reviewer || 'WHO AWaRe Expert Panel'}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Text style={styles.metadataLabel}>{language === 'bn' ? 'সর্বশেষ সিঙ্ক (Synced):' : 'Last Synced:'}</Text>
+                <Text style={styles.metadataValue}>
+                  {catalogueMeta?.freshnessTimestamp ? new Date(catalogueMeta.freshnessTimestamp).toLocaleTimeString() : 'Pending'}
+                </Text>
+              </View>
+
+              {/* Mandatory Dosing Disclaimer */}
+              <View style={styles.disclaimerBox}>
+                <Text style={styles.disclaimerText}>
+                  ⚠️ {language === 'bn'
+                    ? 'ক্লিনিকাল সতর্কতা: ক্যাটালগের ডোজ ও সময়কাল শুধুমাত্র প্রাপ্তবয়স্কদের সাধারণ রেফারেন্স নির্দেশিকা। প্রতিটি রোগীর নির্দিষ্ট মাত্রা চিকিৎসক দ্বারা নির্ধারিত হতে হবে।'
+                    : 'Clinical Notice: Catalogue dose and duration values are general adult reference guidance only. Patient-specific dosing must be individualized by the prescriber.'}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
 
@@ -287,6 +348,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4338CA',
     fontWeight: '600',
+  },
+  syncBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#DCFCE7',
+  },
+  syncBannerText: {
+    fontSize: 11,
+    color: '#166534',
+    fontWeight: '600',
+  },
+  syncBannerTime: {
+    fontSize: 11,
+    color: '#15803D',
   },
   scrollContent: {
     padding: 16,
@@ -403,6 +483,37 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  metadataLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  metadataValue: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  disclaimerBox: {
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#92400E',
+    lineHeight: 18,
+    fontWeight: '500',
   },
   bottomNav: {
     position: 'absolute',

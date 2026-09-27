@@ -12,6 +12,7 @@ import Navbar from '../Navbar';
 import Footer from '../Footer';
 import { processPrescription } from './PrescriptionUploadModal';
 import antibioticsData from '../../../data/antibiotics.json';
+import { fetchAntibioticsCatalogue } from '../../../services/catalogueService';
 
 function CollapsibleSection({ title, icon: Icon, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -45,24 +46,86 @@ function CollapsibleSection({ title, icon: Icon, defaultOpen = false, children }
 }
 
 function AntibioticCard({ item }) {
+  const isAmbiguous = Boolean(item.isAmbiguous);
   const ab = item.antibiotic;
   const med = item.medicine;
+
+  if (isAmbiguous || !ab) {
+    const candidates = item.candidates || [];
+    return (
+      <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">
+                ⚠️ Ambiguous Match
+              </span>
+              <span className="text-xs text-amber-800 font-medium">Uncertain OCR / Brand Spelling</span>
+            </div>
+            <h3 className="font-bold text-gray-800 mt-1">Prescribed: &quot;{med?.medicine_name || 'Unknown'}&quot;</h3>
+            <p className="text-xs text-gray-600 mt-0.5">
+              {item.ambiguityReason || 'Multiple close catalogue entries matched. Automatic selection withheld for clinical safety.'}
+            </p>
+          </div>
+        </div>
+
+        {candidates.length > 0 && (
+          <div className="mt-3 border-t border-amber-200 pt-2">
+            <p className="text-xs font-semibold text-gray-700 mb-1">Potential Candidates (Clinician Must Review):</p>
+            <div className="space-y-1.5">
+              {candidates.slice(0, 3).map((c, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs bg-white/80 rounded px-2 py-1 border border-amber-100">
+                  <span className="font-medium text-gray-800">
+                    {c.genericName} {c.brandName ? `(${c.brandName})` : ''}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {c.awareGroup && (
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                        c.awareGroup === 'ACCESS' ? 'bg-green-100 text-green-800' :
+                        c.awareGroup === 'WATCH' ? 'bg-amber-100 text-amber-800' :
+                        c.awareGroup === 'RESERVE' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        WHO {c.awareGroup}
+                      </span>
+                    )}
+                    <span className="text-gray-500">{((c.confidence || 0) * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const genericName = ab.generic_name || ab.genericName;
   const brandNames = ab.brand_names || ab.brandNames || [];
   const doseDuration = ab.dose_duration || ab.doseDuration;
   const sideEffects = ab.side_effects || ab.sideEffects;
   const ageConsiderations = ab.age_considerations || ab.ageConsiderations;
+  const awareCategory = ab.awareCategory || ab.aware_category || 'UNCLASSIFIED';
+
   return (
     <div className="rounded-xl border border-teal-100 bg-gradient-to-br from-teal-50/50 to-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-bold text-teal-800">{genericName}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-teal-800">{genericName}</h3>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              awareCategory === 'ACCESS' ? 'bg-green-100 text-green-800' :
+              awareCategory === 'WATCH' ? 'bg-amber-100 text-amber-800' :
+              awareCategory === 'RESERVE' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'
+            }`}>
+              WHO {awareCategory}
+            </span>
+          </div>
           {brandNames.length > 0 && (
             <p className="text-sm text-gray-600">Brands: {brandNames.slice(0, 3).join(', ')}</p>
           )}
         </div>
         <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-700">
-          {item.matched_on} • {(item.confidence * 100).toFixed(0)}%
+          {item.matched_on} • {((item.confidence || 0) * 100).toFixed(0)}%
         </span>
       </div>
       <div className="mt-3 space-y-2 text-sm">
@@ -98,8 +161,16 @@ export default function PrescriptionResults({ scanData, onBack }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedMedicines, setEditedMedicines] = useState(scanData?.medicines || []);
   const [editForm, setEditForm] = useState({});
-  const antibiotics = antibioticsData;
+  const [catalogueMeta, setCatalogueMeta] = useState(null);
+  const [activeCatalogue, setActiveCatalogue] = useState([]);
   const [displayData, setDisplayData] = useState(scanData);
+
+  useEffect(() => {
+    fetchAntibioticsCatalogue().then(({ items, metadata }) => {
+      setActiveCatalogue(items);
+      setCatalogueMeta(metadata);
+    });
+  }, []);
 
   useEffect(() => {
     setDisplayData(scanData);
@@ -127,8 +198,9 @@ export default function PrescriptionResults({ scanData, onBack }) {
   };
 
   const handleReRun = () => {
-    if (antibiotics.length === 0) return;
-    const result = processPrescription(scanData?.ocrText || '', antibiotics, editedMedicines);
+    const catalogueToUse = activeCatalogue.length > 0 ? activeCatalogue : antibioticsData;
+    if (catalogueToUse.length === 0) return;
+    const result = processPrescription(scanData?.ocrText || '', catalogueToUse, editedMedicines);
     setDisplayData(result);
   };
 
@@ -161,7 +233,37 @@ export default function PrescriptionResults({ scanData, onBack }) {
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Prescription Scan Results</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Prescription Scan Results</h1>
+
+        {/* Catalogue Version & Synchronization Banner */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-teal-200 bg-teal-50/70 px-4 py-2.5 text-xs text-teal-900 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">📚 Catalogue Version:</span>
+            <code className="rounded bg-teal-100 px-2 py-0.5 font-mono font-bold text-teal-800">
+              {catalogueMeta?.version || 'Synchronizing...'}
+            </code>
+            {catalogueMeta?.isOfflineFallback ? (
+              <span className="rounded bg-amber-200 px-1.5 py-0.5 font-bold text-amber-900">
+                Offline Fallback
+              </span>
+            ) : (
+              <span className="rounded bg-green-100 px-1.5 py-0.5 font-semibold text-green-800">
+                Live Server API
+              </span>
+            )}
+          </div>
+          <div className="text-gray-600 flex items-center gap-3">
+            <span>
+              <strong>Reviewer:</strong> {catalogueMeta?.reviewer || 'WHO AWaRe Panel'}
+            </span>
+            <span>
+              <strong>Synced:</strong>{' '}
+              {catalogueMeta?.freshness
+                ? new Date(catalogueMeta.freshness).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                : 'Pending'}
+            </span>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <CollapsibleSection title="Raw OCR Text" icon={FaPills} defaultOpen={false}>

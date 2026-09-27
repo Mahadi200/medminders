@@ -11,6 +11,7 @@ import { authRouter } from './routes/auth.js';
 import { filesRouter } from './routes/files.js';
 import { healthRouter } from './routes/health.js';
 import { docsRouter } from './routes/docs.js';
+import { catalogueRouter } from './routes/catalogue.js';
 
 export const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/files', filesRouter);
 app.use('/api/v1/prescriptions', prescriptionsRouter);
 app.use('/api/v1/antibiotics', antibioticsRouter);
+app.use('/api/v1/catalogue', catalogueRouter);
 app.use('/api/v1/admin', adminRouter);
 
 // 5. Deprecated Legacy /api/* Aliases (Preserved with strict RFC 8594 Sunset & Deprecation headers)
@@ -52,6 +54,7 @@ app.use('/api/auth', legacyDeprecationMiddleware('/api/v1'), authRouter);
 app.use('/api/files', legacyDeprecationMiddleware('/api/v1'), filesRouter);
 app.use('/api/prescriptions', legacyDeprecationMiddleware('/api/v1'), prescriptionsRouter);
 app.use('/api/antibiotics', legacyDeprecationMiddleware('/api/v1'), antibioticsRouter);
+app.use('/api/catalogue', legacyDeprecationMiddleware('/api/v1'), catalogueRouter);
 app.use('/api/admin', legacyDeprecationMiddleware('/api/v1'), adminRouter);
 
 // 6. Centralized Error Handler (Envelope + RFC 7807 problem details)

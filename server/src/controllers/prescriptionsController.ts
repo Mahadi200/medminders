@@ -123,12 +123,16 @@ export async function scanPrescription(req: Request, res: Response) {
     );
 
     const antibiotics = antibioticMatches
-      .filter(a => a.match?.match)
+      .filter(a => a.match?.match || (a.match?.candidates && a.match.candidates.length > 0))
       .map(a => ({
         medicine: a.medicine,
-        antibiotic: a.match!.match,
-        confidence: a.match!.confidence,
-        matched_on: a.match!.matched_on,
+        antibiotic: a.match?.match || null,
+        confidence: a.match?.confidence ?? 0,
+        matched_on: a.match?.matched_on || null,
+        isAmbiguous: Boolean(a.match?.isAmbiguous),
+        ambiguityReason: a.match?.ambiguityReason || null,
+        candidates: a.match?.candidates || [],
+        catalogueVersion: a.match?.catalogueVersion || null,
       }));
 
     const interactions = checkInteractions(

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCloudUploadAlt, FaTimes, FaFilePdf, FaPaste } from 'react-icons/fa';
 import { createWorker } from 'tesseract.js';
@@ -6,6 +6,7 @@ import { parseMedicineText } from '../../../utils/medicineParser';
 import { matchAntibiotic } from '../../../utils/antibioticMatcher';
 import { getStewardshipWarnings, detectRedFlags, checkInteractions } from '../../../utils/safetyAlerts';
 import antibioticsData from '../../../data/antibiotics.json';
+import { fetchAntibioticsCatalogue } from '../../../services/catalogueService';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_SIZE_MB = 10;
@@ -50,11 +51,19 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onScanSuccess
   const [file, setFile] = useState(null);
   const [pasteText, setPasteText] = useState('');
   const [preview, setPreview] = useState(null);
-  const antibiotics = antibioticsData;
+  const [antibiotics, setAntibiotics] = useState(antibioticsData);
+  const [catalogueMeta, setCatalogueMeta] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    fetchAntibioticsCatalogue().then(({ items, metadata }) => {
+      if (items?.length) setAntibiotics(items);
+      if (metadata) setCatalogueMeta(metadata);
+    });
+  }, []);
 
   const validateFile = (f) => {
     if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {

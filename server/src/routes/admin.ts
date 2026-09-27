@@ -5,8 +5,12 @@ import { requireAdmin } from '../middleware/authGuard.js';
 import { AuditService } from '../services/audit/auditService.js';
 import { ValidationError } from '../utils/errors.js';
 import { ProfessionalVerificationService } from '../services/verification/professionalVerificationService.js';
+import { CatalogueImportService } from '../services/catalogue/catalogueImportService.js';
+import { catalogueAdminRateLimiter } from '../middleware/rateLimiter.js';
+import { PrismaClient } from '@prisma/client';
 
 const router = Router();
+const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 /**
@@ -156,5 +160,190 @@ router.post('/verification/affiliate', requireAdmin, async (req: Request, res: R
     next(err);
   }
 });
+
+// =============================================================
+// Versioned Medicine & Antibiotic Catalogue Curation Endpoints
+// =============================================================
+
+/**
+ * POST /api/v1/admin/catalogue/import/stage
+ * Uploads, parses, validates, and stages spreadsheet.
+ * Computes diff and detects brand conflicts without touching published catalogue.
+ */
+router.post(
+  '/catalogue/import/stage',
+  requireAdmin,
+  catalogueAdminRateLimiter.middleware(),
+  upload.single('file'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        return next(new ValidationError('Spreadsheet file is required'));
+      }
+      if (!req.file.originalname.endsWith('.xlsx')) {
+        return next(new ValidationError('Only .xlsx spreadsheet format is supported'));
+      }
+
+      const stagingResult = await CatalogueImportService.stageXlsx({
+        buffer: req.file.buffer,
+        filename: req.file.originalname,
+        uploadedByUserId: req.user!.id,
+        defaultSource: req.body?.source,
+      });
+
+      res.status(202).json({
+        success: true,
+        message: 'Spreadsheet staged for review. Approval required before publication.',
+        ...stagingResult,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/admin/catalogue/import/stage/:batchId
+ * Review staged batch, diff, and row validation errors.
+ */
+router.get(
+  '/catalogue/import/stage/:batchId',
+  requireAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const batch = await CatalogueImportService.getStagingBatch(req.params.batchId);
+      res.json(batch);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/admin/catalogue/import/stage/:batchId/approve
+ * Approves staged batch, supersedes previous active version, and publishes new catalogue version.
+ */
+router.post(
+  '/catalogue/import/stage/:batchId/approve',
+  requireAdmin,
+  catalogueAdminRateLimiter.middleware(),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { version, curatorNotes, effectiveDate } = req.body;
+      if (!version) {
+        return next(new ValidationError('version is required (e.g. v1.0.0, 1.1.0)'));
+      }
+
+      const release = await CatalogueImportService.approveAndPublish({
+        batchId: req.params.batchId,
+        curatorUserId: req.user!.id,
+        version,
+        curatorNotes,
+        effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
+      });
+
+      res.json({
+        success: true,
+        message: `Catalogue version ${release.version} successfully published.`,
+        release,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/admin/catalogue/import/stage/:batchId/reject
+ * Rejects staged batch with curator rationale.
+ */
+router.post(
+  '/catalogue/import/stage/:batchId/reject',
+  requireAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { rejectionReason } = req.body;
+      const rejected = await CatalogueImportService.rejectStagingBatch(
+        req.params.batchId,
+        req.user!.id,
+        rejectionReason
+      );
+
+      res.json({
+        success: true,
+        message: 'Staging batch rejected.',
+        batch: rejected,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/admin/catalogue/releases
+ * List all catalogue releases (published, superseded, draft) with audit metadata.
+ */
+router.get(
+  '/catalogue/releases',
+  requireAdmin,
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const releases = await prisma.catalogueRelease.findMany({
+        orderBy: { effectiveDate: 'desc' },
+        include: {
+          curator: { select: { id: true, email: true } },
+          _count: { select: { generics: true } },
+        },
+      });
+
+      res.json({
+        total: releases.length,
+        releases: releases.map(r => ({
+          id: r.id,
+          version: r.version,
+          status: r.status,
+          source: r.source,
+          curator: r.curator?.email || r.curatorUserId,
+          curatorNotes: r.curatorNotes,
+          effectiveDate: r.effectiveDate,
+          publishedAt: r.publishedAt,
+          supersededAt: r.supersededAt,
+          genericsCount: r._count.generics,
+          createdAt: r.createdAt,
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/admin/catalogue/releases/:releaseId/rollback
+ * Roll back to a previous catalogue release version without erasing history.
+ */
+router.post(
+  '/catalogue/releases/:releaseId/rollback',
+  requireAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { reason } = req.body;
+      const restored = await CatalogueImportService.rollbackToVersion(
+        req.params.releaseId,
+        req.user!.id,
+        reason
+      );
+
+      res.json({
+        success: true,
+        message: `Catalogue successfully rolled back to active version ${restored.version}.`,
+        release: restored,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export const adminRouter = router;

@@ -96,6 +96,11 @@ model User {
   // Audit
   auditEventsTriggered AuditEvent[] @relation("ActorAuditEvents")
   auditEventsTargeted  AuditEvent[] @relation("TargetAuditEvents")
+
+  // Catalogue Curation & Staging
+  curatedReleases        CatalogueRelease[]      @relation("CuratedReleases")
+  uploadedStagingBatches CatalogueStagingBatch[] @relation("UploadedStagingBatches")
+  reviewedStagingBatches CatalogueStagingBatch[] @relation("ReviewedStagingBatches")
 }
 
 model UserRoleAssignment {
@@ -496,6 +501,7 @@ enum AwareCategory {
   WATCH
   RESERVE
   UNCLASSIFIED
+  UNKNOWN
 }
 
 model Antibiotic {
@@ -509,12 +515,124 @@ model Antibiotic {
   sideEffects       String?        @db.Text
   awareCategory     AwareCategory  @default(UNCLASSIFIED)
   whoListingUrl     String?
+  catalogueVersion  String?        @default("unversioned_initial")
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
   prescriptionItems PrescriptionItem[]
 
   @@index([genericName])
+}
+
+// -------------------------------------------------------------
+// 6b. Versioned Medicine & Antibiotic Catalogue
+// -------------------------------------------------------------
+
+enum CatalogueReleaseStatus {
+  DRAFT_STAGING
+  PENDING_REVIEW
+  PUBLISHED
+  SUPERSEDED
+  REJECTED
+  ARCHIVED
+}
+
+enum StagingStatus {
+  PARSED
+  VALIDATED
+  DIFF_READY
+  APPROVED
+  REJECTED
+}
+
+model CatalogueRelease {
+  id              String                 @id @default(cuid())
+  version         String                 @unique // e.g. "v1.0.0", "v1.1.0"
+  status          CatalogueReleaseStatus @default(DRAFT_STAGING)
+  description     String?                @db.Text
+  source          String                 // e.g. "WHO AWaRe 2023 / DGDA / antibiotic_dose.xlsx"
+  sourceSha256    String?
+  curatorUserId   String?
+  curator         User?                  @relation("CuratedReleases", fields: [curatorUserId], references: [id], onDelete: SetNull)
+  curatorNotes    String?                @db.Text
+  effectiveDate   DateTime               @default(now())
+  publishedAt     DateTime?
+  supersededAt    DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  generics        MedicineGeneric[]
+  stagingBatches  CatalogueStagingBatch[]
+
+  @@index([status, effectiveDate])
+}
+
+model MedicineGeneric {
+  id                      String            @id @default(cuid())
+  catalogueReleaseId      String
+  catalogueRelease        CatalogueRelease  @relation(fields: [catalogueReleaseId], references: [id], onDelete: Cascade)
+  genericName             String            // e.g. "Ceftriaxone"
+  antibioticClass         String?           // e.g. "3rd Gen Cephalosporin"
+  isAntibiotic            Boolean           @default(true)
+  awareGroup              AwareCategory     @default(UNCLASSIFIED)
+  clinicalSource          String            // e.g. "WHO AWaRe 2023 / DGDA"
+  referenceDosingGuidance String?           @db.Text // Informational adult guidance only - NOT patient prescription
+  ageConsiderations       String?           @db.Text
+  sideEffects             String?           @db.Text
+  reviewer                String?           // Qualified clinical reviewer
+  effectiveDate           DateTime          @default(now())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  brands                  MedicineBrand[]
+
+  @@unique([catalogueReleaseId, genericName])
+  @@index([genericName])
+  @@index([awareGroup])
+  @@index([catalogueReleaseId])
+}
+
+model MedicineBrand {
+  id                  String           @id @default(cuid())
+  genericId           String
+  generic             MedicineGeneric  @relation(fields: [genericId], references: [id], onDelete: Cascade)
+  brandName           String           // e.g. "Exephin"
+  normalizedBrandName String           // lowercase alphanumeric for matching
+  manufacturer        String?          // e.g. "Incepta Pharmaceuticals"
+  strength            String?          @default("UNKNOWN") // e.g. "1 g", "500 mg", "UNKNOWN"
+  dosageForm          String?          @default("UNKNOWN") // e.g. "IV/IM Injection", "Tablet", "UNKNOWN"
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([brandName])
+  @@index([normalizedBrandName])
+  @@index([genericId])
+}
+
+model CatalogueStagingBatch {
+  id                   String            @id @default(cuid())
+  catalogueReleaseId   String?
+  catalogueRelease     CatalogueRelease? @relation(fields: [catalogueReleaseId], references: [id], onDelete: SetNull)
+  uploadedByUserId     String
+  uploadedBy           User              @relation("UploadedStagingBatches", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  filename             String
+  fileSha256           String
+  status               StagingStatus     @default(PARSED)
+  totalRows            Int               @default(0)
+  validRows            Int               @default(0)
+  errorRows            Int               @default(0)
+  diffSummaryJson      String?           @db.Text // Diff summary against published catalogue
+  validationErrorsJson String?           @db.Text // Row errors & brand conflicts
+  stagedDataJson       String?           @db.Text // Full normalized staged payload
+  reviewedByUserId     String?
+  reviewedBy           User?             @relation("ReviewedStagingBatches", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt           DateTime?
+  reviewNotes          String?           @db.Text
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([uploadedByUserId])
 }
 
 // -------------------------------------------------------------

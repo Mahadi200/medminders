@@ -3,6 +3,7 @@ import http from 'http';
 import { app } from '../app.js';
 import { getDataStore, InMemoryClinicalDataStore, setTestDataStore } from '../services/auth/dataStore.js';
 import { TokenService } from '../services/auth/tokenService.js';
+import { AuditService } from '../services/audit/auditService.js';
 
 let server: http.Server;
 let baseUrl: string;
@@ -21,9 +22,14 @@ let tokenPharmacyStaff: string;
 let tokenRepresentative: string;
 
 beforeAll(async () => {
-  // 1. Initialize clean simulated in-memory clinical test store
+  // 1. Initialize clean simulated in-memory clinical test store and mock audit logger
   testStore = new InMemoryClinicalDataStore();
   setTestDataStore(testStore);
+  AuditService.setPrismaInstance({
+    auditEvent: {
+      create: async () => ({ id: 'mock_audit_1' }),
+    },
+  } as any);
 
   // 2. Mint test tokens for all roles
   tokenPatientA = (await TokenService.issueTokenPair('user_patient_a')).accessToken;
