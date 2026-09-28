@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  role      String   // "patient" | "doctor" | "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  prescriptions   PrescriptionUpload[]
+  prescriptionScans PrescriptionScan[]
+}
+
+model PrescriptionUpload {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileType  String   // "image" | "pdf"
+  fileUrl   String
+  createdAt DateTime @default(now())
+
+  scans PrescriptionScan[]
+}
+
+model PrescriptionScan {
+  id             String   @id @default(cuid())
+  uploadId       String
+  upload         PrescriptionUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ocrText        String   @db.Text
+  ocrConfidence  Float?
+  medicinesJson  String   @db.Text
+  antibioticsJson String  @db.Text
+  alertsJson     String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([uploadId])
+}
+
+model Antibiotic {
+  id               String   @id @default(cuid())
+  genericName      String   @unique
+  group            String?  @db.Text
+  brandNames       String[]
+  companies        String[]
+  ageConsiderations String? @db.Text
+  doseDuration     String?  @db.Text
+  sideEffects      String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([genericName])
+}
