@@ -1,9 +1,20 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../services/database/prisma.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
-const prisma = new PrismaClient();
+
+/**
+ * GET /health (and /api/v1/health)
+ * Default health endpoint for Render and external HTTP uptime probes.
+ */
+router.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
 
 /**
  * GET /health/live (and /api/v1/health/live)

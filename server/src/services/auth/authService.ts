@@ -51,8 +51,9 @@ export class AuthService {
     const roles = await store.getUserRoles(user.id);
     const isPrivileged = MfaService.isPrivilegedRole(roles);
 
-    // If privileged role and MFA is not bypassed (e.g. in test convenience mode)
-    if (isPrivileged && opts?.bypassMfa !== true && process.env.BYPASS_MFA !== 'true') {
+    // If privileged role and MFA is not bypassed (strictly prohibited in production)
+    const allowBypass = process.env.NODE_ENV !== 'production' && (opts?.bypassMfa === true || process.env.BYPASS_MFA === 'true');
+    if (isPrivileged && !allowBypass) {
       const challenge = await MfaService.initiateMfa(user.id, user.email);
       return {
         mfaRequired: true,

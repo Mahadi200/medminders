@@ -59,31 +59,43 @@ const MedMindersHospitalDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-        <Navbar/>
+    <div className="min-h-screen bg-[#F4F8FA]">
+      <Navbar />
+
+      {/* Synthetic Demo Banner */}
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-900 text-center font-medium flex items-center justify-center space-x-2">
+        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>
+          ⚠️ ডেমো সিমুলেশন (DEMO SIMULATION) — সমস্ত রোগীর নাম, শয্যা পরিসংখ্যান, আর্থিক তথ্য এবং চিকিৎসকের উপস্থিতি অফলাইন টেস্ট ডেটা। এটি কোনো লাইভ হাসপাতাল টেলিফোনি বা রিয়েল-টাইম ডাটা ফিড নয়।
+        </span>
+      </div>
+
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-800 to-teal-600 text-white p-4 shadow-lg">
-        <div className="container mx-auto flex justify-between items-center">
+      <header className="bg-[#0A2342] text-white p-4 shadow-md border-b border-[#0F3A66]">
+        <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center space-x-3">
-            <FaHospital className="text-3xl" />
-            <h1 className="text-2xl font-bold">MedMinders Hospital ERP</h1>
+            <div className="w-10 h-10 rounded-lg bg-[#028090] flex items-center justify-center text-white">
+              <FaHospital className="text-2xl" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">MedMinders Hospital Clinical ERP</h1>
+              <p className="text-xs text-slate-300">Departmental Ward & Antibiotic Stewardship Console (সিমুলেটেড ডেমো / Demo Mode)</p>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Quick search..."
-                className="bg-white bg-opacity-20 px-4 py-2 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-white"
+                placeholder="Search patient / doctor..."
+                className="bg-[#0F3A66] border border-[#028090]/40 px-4 py-1.5 rounded-lg text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A896]"
               />
-              <FaSearch className="absolute right-3 top-3 text-blue-100" />
+              <FaSearch className="absolute right-3 top-2.5 text-slate-400 text-xs" />
             </div>
-            <div className="flex items-center space-x-2">
-              <img 
-                src="https://randomuser.me/api/portraits/men/75.jpg" 
-                alt="Admin" 
-                className="w-10 h-10 rounded-full border-2 border-white"
-              />
-              <span className="font-medium">Admin</span>
+            <div className="flex items-center space-x-2 bg-[#0F3A66] px-3 py-1.5 rounded-lg border border-[#028090]/30">
+              <div className="w-7 h-7 rounded-full bg-[#028090] flex items-center justify-center text-xs font-bold">
+                HA
+              </div>
+              <span className="text-xs font-medium text-slate-200">Hospital Admin</span>
             </div>
           </div>
         </div>
@@ -94,118 +106,118 @@ const MedMindersHospitalDashboard = () => {
         {/* Left Sidebar - Quick Access */}
         <div className="lg:col-span-1 space-y-6">
           {/* Quick Stats */}
-          <motion.div 
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            className="bg-white rounded-xl shadow-md p-6"
-          >
-            <h2 className="text-xl font-bold mb-4 flex items-center">
-              <FaChartLine className="mr-2 text-blue-600" />
-              Quick Stats
-            </h2>
+          <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold flex items-center text-[#0A2342]">
+                <FaChartLine className="mr-2 text-[#028090]" />
+                Quick Stats
+              </h2>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
+                DEMO SIMULATION
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mb-4">
+              *অফলাইন সিমুলেশন ডেটা — লাইভ টেলিফোনি বা এন্টারপ্রাইজ ফিড নয় (Not Live Telephonic Data)
+            </p>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <FaUserInjured className="text-blue-500 mr-2" />
-                  <span>Patients Today</span>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center text-slate-700">
+                  <FaUserInjured className="text-[#028090] mr-2" />
+                  <span>Patients Today (Demo)</span>
                 </div>
-                <span className="font-bold">42</span>
+                <span className="font-bold text-[#0A2342]">42</span>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <FaUserMd className="text-green-500 mr-2" />
-                  <span>Doctors On Duty</span>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center text-slate-700">
+                  <FaUserMd className="text-[#00A896] mr-2" />
+                  <span>Doctors On Duty (Simulated)</span>
                 </div>
-                <span className="font-bold">8</span>
+                <span className="font-bold text-[#0A2342]">8</span>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <FaRegCalendarCheck className="text-purple-500 mr-2" />
-                  <span>Appointments</span>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center text-slate-700">
+                  <FaRegCalendarCheck className="text-purple-600 mr-2" />
+                  <span>Appointments (Demo)</span>
                 </div>
-                <span className="font-bold">27</span>
+                <span className="font-bold text-[#0A2342]">27</span>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <FaProcedures className="text-red-500 mr-2" />
-                  <span>Admissions</span>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center text-slate-700">
+                  <FaProcedures className="text-rose-600 mr-2" />
+                  <span>Admissions (Demo)</span>
                 </div>
-                <span className="font-bold">5</span>
+                <span className="font-bold text-[#0A2342]">5</span>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Revenue Summary */}
-          <motion.div 
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-md p-6"
-          >
-            <h2 className="text-xl font-bold mb-4 flex items-center">
-              <FaFileInvoiceDollar className="mr-2 text-green-600" />
-              Revenue Summary
-            </h2>
-            <div className="space-y-4">
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">Today's Revenue</p>
-                <p className="text-xl font-bold">৳{revenueData.today.toLocaleString()}</p>
+          <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold flex items-center text-[#0A2342]">
+                <FaFileInvoiceDollar className="mr-2 text-[#00A896]" />
+                Revenue Summary
+              </h2>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
+                DEMO SIMULATION
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mb-3">
+              *সিমুলেটেড আর্থিক পরিসংখ্যান (Simulated figures for demonstration only)
+            </p>
+            <div className="space-y-3">
+              <div className="bg-[#F4F8FA] p-3 rounded-lg border border-[#D1E3EB]">
+                <p className="text-xs text-slate-600">Today's Revenue (Simulated)</p>
+                <p className="text-lg font-bold text-[#0A2342]">৳{revenueData.today.toLocaleString()}</p>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">Monthly Revenue</p>
-                <p className="text-xl font-bold">৳{revenueData.monthly.toLocaleString()}</p>
+              <div className="bg-[#ECFDF5] p-3 rounded-lg border border-[#A7F3D0]">
+                <p className="text-xs text-emerald-700">Monthly Revenue (Simulated)</p>
+                <p className="text-lg font-bold text-emerald-900">৳{revenueData.monthly.toLocaleString()}</p>
               </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">Outstanding</p>
-                <p className="text-xl font-bold">৳{revenueData.outstanding.toLocaleString()}</p>
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800">Outstanding (Simulated)</p>
+                <p className="text-lg font-bold text-amber-900">৳{revenueData.outstanding.toLocaleString()}</p>
               </div>
             </div>
-            <button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-teal-500 text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity">
-              View Full Report
+            <button className="w-full mt-4 bg-[#028090] text-white py-2 rounded-lg font-medium hover:bg-[#00A896] transition-colors text-sm">
+              View Full Report (Demo)
             </button>
-          </motion.div>
+          </div>
         </div>
+
 
         {/* Main Dashboard Area */}
         <div className="lg:col-span-3 space-y-6">
           {/* Patient Management Section */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl shadow-md overflow-hidden"
-          >
-            <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold flex items-center">
-                <FaUserInjured className="mr-2" />
+          <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] overflow-hidden">
+            <div className="bg-[#0F3A66] p-4 text-white flex justify-between items-center">
+              <h2 className="text-lg font-bold flex items-center">
+                <FaUserInjured className="mr-2 text-[#00A896]" />
                 Patient Management
               </h2>
               <div className="relative w-64">
                 <input
                   type="text"
                   placeholder="Search patients..."
-                  className="w-full bg-white bg-opacity-20 px-4 py-2 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-white"
+                  className="w-full bg-[#0A2342] border border-[#028090]/40 px-4 py-1.5 rounded-lg text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A896]"
                   value={patientSearch}
                   onChange={(e) => setPatientSearch(e.target.value)}
                 />
-                <FaSearch className="absolute right-3 top-3 text-blue-100" />
+                <FaSearch className="absolute right-3 top-2.5 text-slate-400 text-xs" />
               </div>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <button className="bg-blue-100 text-blue-800 p-3 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
-                  <FaUserInjured className="mr-2" />
+                <button className="bg-[#F4F8FA] border border-[#D1E3EB] text-[#0A2342] p-3 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors text-sm font-semibold">
+                  <FaUserInjured className="mr-2 text-[#028090]" />
                   New Registration
                 </button>
-                <button className="bg-green-100 text-green-800 p-3 rounded-lg flex items-center justify-center hover:bg-green-200 transition-colors">
-                  <FaFileMedical className="mr-2" />
+                <button className="bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] p-3 rounded-lg flex items-center justify-center hover:bg-emerald-100 transition-colors text-sm font-semibold">
+                  <FaFileMedical className="mr-2 text-[#00A896]" />
                   Generate Report
                 </button>
-                <button className="bg-purple-100 text-purple-800 p-3 rounded-lg flex items-center justify-center hover:bg-purple-200 transition-colors">
-                  <MdPayment className="mr-2" />
+                <button className="bg-indigo-50 border border-indigo-200 text-indigo-900 p-3 rounded-lg flex items-center justify-center hover:bg-indigo-100 transition-colors text-sm font-semibold">
+                  <MdPayment className="mr-2 text-indigo-600" />
                   Billing System
                 </button>
               </div>
@@ -246,187 +258,175 @@ const MedMindersHospitalDashboard = () => {
                 </table>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Doctor & Appointment Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Doctor Management */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeIn}
-              transition={{ delay: 0.6 }}
-              className="bg-white rounded-xl shadow-md overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white">
-                <h2 className="text-xl font-bold flex items-center">
-                  <FaUserMd className="mr-2" />
-                  Doctor Directory
-                </h2>
+            <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] overflow-hidden">
+              <div className="bg-[#0F3A66] p-4 text-white">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-bold flex items-center">
+                    <FaUserMd className="mr-2 text-[#00A896]" />
+                    Doctor Directory
+                  </h2>
+                  <span className="text-[10px] font-bold bg-[#028090]/40 text-teal-200 border border-teal-400/40 px-2 py-0.5 rounded-full">
+                    সিমুলেটেড রোস্টার (Simulated)
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-1">
+                  *টেলিফোনিক বা লাইভ শিডিউল নয় — অফলাইন নমুনা উপস্থিতি
+                </p>
                 <div className="relative mt-2">
                   <input
                     type="text"
                     placeholder="Search doctors..."
-                    className="w-full bg-white bg-opacity-20 px-4 py-2 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-white"
+                    className="w-full bg-[#0A2342] border border-[#028090]/40 px-4 py-1.5 rounded-lg text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A896]"
                     value={doctorSearch}
                     onChange={(e) => setDoctorSearch(e.target.value)}
                   />
-                  <FaSearch className="absolute right-3 top-3 text-blue-100" />
+                  <FaSearch className="absolute right-3 top-2.5 text-slate-400 text-xs" />
                 </div>
               </div>
               <div className="p-4">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredDoctors.map(doctor => (
-                    <div key={doctor.id} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="bg-blue-100 p-2 rounded-full mr-3">
-                        <FaUserMd className="text-blue-600" />
+                    <div key={doctor.id} className="flex items-center p-3 border border-[#D1E3EB] rounded-lg hover:bg-[#F4F8FA] transition-colors">
+                      <div className="bg-[#E0F2F1] text-[#028090] p-2 rounded-full mr-3">
+                        <FaUserMd />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-medium">{doctor.name}</h3>
-                        <p className="text-sm text-gray-600">{doctor.specialty}</p>
+                        <h3 className="font-semibold text-sm text-[#0A2342]">{doctor.name}</h3>
+                        <p className="text-xs text-slate-500">{doctor.specialty} (নমুনা প্রোফাইল)</p>
                       </div>
-                      <div className={`px-2 py-1 text-xs rounded-full ${
-                        doctor.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      <div className={`px-2.5 py-0.5 text-xs rounded-full font-medium ${
+                        doctor.available ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
                       }`}>
-                        {doctor.available ? 'Available' : 'Unavailable'}
+                        {doctor.available ? 'Available (Simulated)' : 'Unavailable (Simulated)'}
                       </div>
                     </div>
                   ))}
                 </div>
-                <button className="w-full mt-4 bg-blue-100 text-blue-800 py-2 rounded-lg font-medium hover:bg-blue-200 transition-colors">
-                  View All Doctors
+                <button className="w-full mt-4 bg-[#F4F8FA] border border-[#D1E3EB] text-[#0A2342] py-2 rounded-lg font-medium hover:bg-slate-100 transition-colors text-sm">
+                  View All Doctors (Demo)
                 </button>
               </div>
-            </motion.div>
+            </div>
 
             {/* Appointment System */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeIn}
-              transition={{ delay: 0.8 }}
-              className="bg-white rounded-xl shadow-md overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white flex justify-between items-center">
-                <h2 className="text-xl font-bold flex items-center">
-                  <FaCalendarAlt className="mr-2" />
-                  Appointment System
-                </h2>
-                <span className="bg-amber-200 text-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
-                  {appointments.length} today
+            <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] overflow-hidden">
+              <div className="bg-[#0F3A66] p-4 text-white flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold flex items-center">
+                    <FaCalendarAlt className="mr-2 text-[#00A896]" />
+                    Appointment System
+                  </h2>
+                  <p className="text-[10px] text-slate-300">DEMO SIMULATION</p>
+                </div>
+                <span className="bg-[#028090] text-white px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                  {appointments.length} simulated today
                 </span>
               </div>
               <div className="p-4">
                 <div className="mb-4 grid grid-cols-2 gap-2">
-                  <button className="bg-blue-100 text-blue-800 p-2 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
-                    <FaRegCalendarCheck className="mr-2" />
-                    New Appointment
+                  <button className="bg-[#F4F8FA] border border-[#D1E3EB] text-[#0A2342] p-2 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors text-xs font-semibold">
+                    <FaRegCalendarCheck className="mr-1.5 text-[#028090]" />
+                    New Appointment (Demo)
                   </button>
-                  <button className="bg-purple-100 text-purple-800 p-2 rounded-lg flex items-center justify-center hover:bg-purple-200 transition-colors">
-                    <MdPeople className="mr-2" />
-                    Waiting List
+                  <button className="bg-indigo-50 border border-indigo-200 text-indigo-900 p-2 rounded-lg flex items-center justify-center hover:bg-indigo-100 transition-colors text-xs font-semibold">
+                    <MdPeople className="mr-1.5 text-indigo-600" />
+                    Waiting List (Demo)
                   </button>
                 </div>
                 
                 <div className="space-y-3">
                   {appointments.map(appointment => (
-                    <div key={appointment.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div key={appointment.id} className="p-3 border border-[#D1E3EB] rounded-lg hover:bg-[#F4F8FA] transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{appointment.patient}</h3>
-                          <p className="text-sm text-gray-600">With {appointment.doctor}</p>
+                          <h3 className="font-semibold text-sm text-[#0A2342]">{appointment.patient}</h3>
+                          <p className="text-xs text-slate-500">With {appointment.doctor}</p>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          appointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        <span className={`px-2.5 py-0.5 text-xs rounded-full font-medium ${
+                          appointment.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
                         }`}>
-                          {appointment.status}
+                          {appointment.status} (Demo)
                         </span>
                       </div>
-                      <div className="flex justify-between mt-2 text-sm">
-                        <span className="text-gray-600">{appointment.date}</span>
-                        <span className="font-medium">{appointment.time}</span>
+                      <div className="flex justify-between mt-2 text-xs text-slate-500">
+                        <span>{appointment.date}</span>
+                        <span className="font-semibold text-[#0A2342]">{appointment.time}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
+
 
           {/* Report & Pharmacy Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Report Delivery System */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeIn}
-              transition={{ delay: 1.0 }}
-              className="bg-white rounded-xl shadow-md overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white flex justify-between items-center">
-                <h2 className="text-xl font-bold flex items-center">
-                  <FaFileMedical className="mr-2" />
+            <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] overflow-hidden">
+              <div className="bg-[#0F3A66] p-4 text-white flex justify-between items-center">
+                <h2 className="text-lg font-bold flex items-center">
+                  <FaFileMedical className="mr-2 text-[#00A896]" />
                   Report Delivery
                 </h2>
-                <span className="bg-amber-200 text-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                <span className="bg-[#028090] text-white px-2.5 py-0.5 rounded-full text-xs font-semibold">
                   15 pending
                 </span>
               </div>
               <div className="p-4">
                 <div className="mb-4 grid grid-cols-3 gap-2">
-                  <div className="bg-blue-50 p-2 rounded-lg text-center">
-                    <p className="text-sm text-gray-600">Pending</p>
-                    <p className="font-bold">15</p>
+                  <div className="bg-[#F4F8FA] border border-[#D1E3EB] p-2.5 rounded-lg text-center">
+                    <p className="text-xs text-slate-500">Pending</p>
+                    <p className="font-bold text-[#0A2342] text-lg">15</p>
                   </div>
-                  <div className="bg-green-50 p-2 rounded-lg text-center">
-                    <p className="text-sm text-gray-600">Completed</p>
-                    <p className="font-bold">42</p>
+                  <div className="bg-[#ECFDF5] border border-[#A7F3D0] p-2.5 rounded-lg text-center">
+                    <p className="text-xs text-emerald-700">Completed</p>
+                    <p className="font-bold text-emerald-900 text-lg">42</p>
                   </div>
-                  <div className="bg-red-50 p-2 rounded-lg text-center">
-                    <p className="text-sm text-gray-600">Delayed</p>
-                    <p className="font-bold">3</p>
+                  <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-lg text-center">
+                    <p className="text-xs text-amber-800">Delayed</p>
+                    <p className="font-bold text-amber-900 text-lg">3</p>
                   </div>
                 </div>
-                <button className="w-full bg-blue-100 text-blue-800 py-2 rounded-lg font-medium hover:bg-blue-200 transition-colors">
+                <button className="w-full bg-[#F4F8FA] border border-[#D1E3EB] text-[#0A2342] py-2 rounded-lg font-medium hover:bg-slate-100 transition-colors text-sm">
                   View All Reports
                 </button>
               </div>
-            </motion.div>
+            </div>
 
             {/* Pharmacy Management */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeIn}
-              transition={{ delay: 1.2 }}
-              className="bg-white rounded-xl shadow-md overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-4 text-white flex justify-between items-center">
-                <h2 className="text-xl font-bold flex items-center">
-                  <MdLocalPharmacy className="mr-2" />
+            <div className="bg-white rounded-xl shadow-xs border border-[#D1E3EB] overflow-hidden">
+              <div className="bg-[#0F3A66] p-4 text-white flex justify-between items-center">
+                <h2 className="text-lg font-bold flex items-center">
+                  <MdLocalPharmacy className="mr-2 text-[#00A896]" />
                   Pharmacy System
                 </h2>
-                <span className="bg-amber-200 text-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                <span className="bg-[#028090] text-white px-2.5 py-0.5 rounded-full text-xs font-semibold">
                   8 orders
                 </span>
               </div>
               <div className="p-4">
                 <div className="mb-4 grid grid-cols-2 gap-2">
-                  <button className="bg-green-100 text-green-800 p-2 rounded-lg flex items-center justify-center hover:bg-green-200 transition-colors">
-                    <GiMedicines className="mr-2" />
+                  <button className="bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] p-2 rounded-lg flex items-center justify-center hover:bg-emerald-100 transition-colors text-xs font-semibold">
+                    <GiMedicines className="mr-1.5 text-[#00A896]" />
                     New Prescription
                   </button>
-                  <button className="bg-purple-100 text-purple-800 p-2 rounded-lg flex items-center justify-center hover:bg-purple-200 transition-colors">
-                    <FaSearch className="mr-2" />
+                  <button className="bg-indigo-50 border border-indigo-200 text-indigo-900 p-2 rounded-lg flex items-center justify-center hover:bg-indigo-100 transition-colors text-xs font-semibold">
+                    <FaSearch className="mr-1.5 text-indigo-600" />
                     Medicine Search
                   </button>
                 </div>
-                <div className="bg-yellow-50 p-3 rounded-lg border-l-4 border-yellow-500">
-                  <p className="text-sm font-medium">Low Stock Alert</p>
-                  <p className="text-xs text-gray-600">5 medicines below threshold</p>
+                <div className="bg-amber-50 p-3 rounded-lg border-l-4 border-amber-500">
+                  <p className="text-xs font-bold text-amber-900">Low Stock Alert</p>
+                  <p className="text-xs text-amber-700">5 medicines below threshold</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </main>

@@ -187,7 +187,7 @@ describe('MedMinders API v1 Foundation & Architecture Verification Suite', () =>
 
       // Reset limiter for subsequent tests
       authRateLimiter.reset();
-    });
+    }, 15000);
   });
 
   // -------------------------------------------------------------

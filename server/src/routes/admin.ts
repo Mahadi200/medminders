@@ -7,10 +7,9 @@ import { ValidationError } from '../utils/errors.js';
 import { ProfessionalVerificationService } from '../services/verification/professionalVerificationService.js';
 import { CatalogueImportService } from '../services/catalogue/catalogueImportService.js';
 import { catalogueAdminRateLimiter } from '../middleware/rateLimiter.js';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../services/database/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 /**

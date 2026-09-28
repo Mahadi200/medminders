@@ -74,15 +74,15 @@ export class MobileCatalogueService {
       this.cachedMetadata = metadata;
       return metadata;
     } catch {
-      // Offline fallback metadata
+      // Offline fallback metadata: strictly marked as outdated snapshot
       const fallbackMeta: CatalogueVersionMetadata = {
-        version: 'v2024.1-mobile-offline',
-        source: 'WHO AWaRe 2024 (Offline Cache)',
-        reviewer: 'Reviewed Clinical Expert Panel',
+        version: 'v2024.11-bundled-offline-snapshot',
+        source: 'Client Bundled Fallback (DGDA 2024 Snapshot)',
+        reviewer: 'Local Bundled Snapshot (Pending Live Sync)',
         publishedAt: null,
         freshnessTimestamp: new Date().toISOString(),
         isOfflineFallback: true,
-        disclaimer: 'General adult reference guidance only; patient dosing must be individualized by prescriber.',
+        disclaimer: '⚠️ অফলাইন রেফারেন্স (পুরোনো স্ন্যাপশট)। বর্তমান ক্যাটালগের জন্য সার্ভার সংযোগ আবশ্যক। প্রাপ্তবয়স্কদের সাধারণ রেফারেন্স নির্দেশিকা, রোগীর প্রেসক্রিপশন নয়।',
       };
       this.cachedMetadata = fallbackMeta;
       return fallbackMeta;

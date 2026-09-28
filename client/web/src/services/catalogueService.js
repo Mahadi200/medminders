@@ -22,15 +22,20 @@ export async function fetchCatalogueMetadata() {
       source: data.source || 'WHO AWaRe 2024 / DGDA Bangladesh',
       freshness: new Date().toISOString(),
       isOfflineFallback: false,
+      isOutdatedReference: false,
     };
   } catch (err) {
     return {
-      version: 'v2024.1-bundled',
+      version: 'v2024.11-bundled-offline-snapshot',
+      snapshotDate: '2024-11-01',
       publishedAt: null,
-      reviewer: 'Local Fallback Reviewer',
+      reviewer: 'Local Bundled Fallback (DGDA 2024)',
       source: 'Client Bundled Fallback (antibiotics.json)',
       freshness: new Date().toISOString(),
       isOfflineFallback: true,
+      isOutdatedReference: true,
+      offlineWarning: '⚠️ অফলাইন রেফারেন্স (পুরোনো তথ্য) — লাইভ সার্ভার সংযোগ বিচ্ছিন্ন। বর্তমান তথ্যের জন্য ইন্টারনেট সংযোগ প্রয়োজন।',
+      offlineWarningEn: '⚠️ Offline Reference (Outdated Snapshot) — Disconnected from Live Server. Do not treat as current published catalogue.',
       error: err instanceof Error ? err.message : 'Network error',
     };
   }
@@ -67,11 +72,14 @@ export async function fetchAntibioticsCatalogue(forceRefresh = false) {
     console.warn('[CatalogueService] Using offline bundled dataset fallback:', err);
     cachedCatalogue = fallbackAntibiotics;
     cachedMetadata = {
-      version: 'v2024.1-bundled',
+      version: 'v2024.11-bundled-offline-snapshot',
+      snapshotDate: '2024-11-01',
       publishedAt: null,
       freshness: new Date().toISOString(),
-      disclaimer: 'Adult reference guidance only. Patient dosing must be individualized by prescriber.',
+      disclaimer: '⚠️ অফলাইন রেফারেন্স স্ন্যাপশট। বর্তমান ক্যাটালগের জন্য সার্ভার সংযোগ আবশ্যক। প্রাপ্তবয়স্কদের সাধারণ রেফারেন্স নির্দেশিকা, রোগীর প্রেসক্রিপশন নয়।',
       isOfflineFallback: true,
+      isOutdatedReference: true,
+      offlineWarning: '⚠️ অফলাইন রেফারেন্স (পুরোনো তথ্য) — লাইভ সার্ভার সংযোগ বিচ্ছিন্ন।',
       error: err instanceof Error ? err.message : 'Network unavailable',
     };
 

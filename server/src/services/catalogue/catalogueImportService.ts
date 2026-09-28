@@ -1,10 +1,9 @@
 import crypto from 'crypto';
 import * as XLSX from 'xlsx';
-import { PrismaClient, AwareCategory } from '@prisma/client';
+import { AwareCategory } from '@prisma/client';
+import { prisma } from '../database/prisma.js';
 import { AuditService } from '../audit/auditService.js';
 import { ValidationError, NotFoundError } from '../../utils/errors.js';
-
-const prisma = new PrismaClient();
 
 const BENGALI_HEADERS: Record<string, string> = {
   'জেনেরিক নাম': 'genericName',

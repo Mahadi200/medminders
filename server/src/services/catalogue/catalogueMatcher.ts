@@ -1,7 +1,6 @@
 import { PrismaClient, AwareCategory } from '@prisma/client';
 import Levenshtein from 'fast-levenshtein';
-
-const prisma = new PrismaClient();
+import { prisma } from '../database/prisma.js';
 
 export interface MedicineMatchCandidate {
   genericId: string;

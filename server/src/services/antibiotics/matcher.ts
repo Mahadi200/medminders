@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { CatalogueMatcher, CatalogueMatchResult, MedicineMatchCandidate } from '../catalogue/catalogueMatcher.js';
-
-const prisma = new PrismaClient();
+import { prisma } from '../database/prisma.js';
 
 export interface MatchResult {
   match: Awaited<ReturnType<typeof findAntibioticById>> | null;

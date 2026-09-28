@@ -1,11 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../services/database/prisma.js';
 import { CatalogueMatcher } from '../services/catalogue/catalogueMatcher.js';
 import { extractPagination, formatPaginatedResponse } from '../utils/pagination.js';
 import { NotFoundError } from '../utils/errors.js';
+import { resolveVerifiedClinicianAudience } from '../middleware/authGuard.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/v1/catalogue/version
@@ -58,6 +58,20 @@ router.get('/version', async (_req: Request, res: Response, next: NextFunction) 
       totalBrands,
       freshnessTimestamp: activeRelease.publishedAt || activeRelease.updatedAt,
       isPublished: true,
+      // Phase 1: Explicitly distinguish technical curator approval from independent clinical governance review
+      curatorApproval: {
+        curatorUserId: activeRelease.curatorUserId,
+        approvedAt: activeRelease.publishedAt,
+        isTechnicalApproved: true,
+        scope: 'TECHNICAL_STAGING_VALIDATION',
+      },
+      clinicalReview: {
+        status: 'PENDING_INDEPENDENT_CLINICAL_GOVERNANCE_REVIEW',
+        isClinicallyApproved: false, // Invariant: Content is NOT clinically approved until independent qualified clinicians sign off
+        qualifiedReviewer: null,
+        clinicalGovernanceNotice: 'Technical catalogue structure approved by curator. Independent clinical sign-off pending governance review committee.',
+        prescriberDisclaimer: 'Dosing values are general adult reference only and must never be treated as patient-specific orders.',
+      },
     });
   } catch (err) {
     next(err);
@@ -67,10 +81,28 @@ router.get('/version', async (_req: Request, res: Response, next: NextFunction) 
 /**
  * GET /api/v1/catalogue/antibiotics
  * Paginated list of antibiotics and medicines from the current published release.
+ * 
+ * Security & Clinical Safety Invariants (SEC-INV-005):
+ * 1. Ignores client-supplied ?audience parameter completely.
+ * 2. Audience is derived strictly from authenticated user's verified role in PostgreSQL.
+ * 3. Anonymous users, patients, representatives, and unverified/suspended clinicians
+ *    strictly receive null for referenceDosingGuidance and ageConsiderations.
+ * 4. Cache isolation: Sets Vary: Authorization, Accept-Encoding.
+ *    - Clinicians: Cache-Control: private, no-transform, max-age=60
+ *    - Public/Patients: Cache-Control: public, max-age=120, stale-while-revalidate=60
  */
 router.get('/antibiotics', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, offset } = extractPagination(req);
+    const isClinicianAudience = await resolveVerifiedClinicianAudience(req);
+
+    // Cache Isolation: public and clinician responses must never share cache
+    res.setHeader('Vary', 'Authorization, Accept-Encoding');
+    if (isClinicianAudience) {
+      res.setHeader('Cache-Control', 'private, no-transform, max-age=60');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
+    }
 
     const activeRelease = await prisma.catalogueRelease.findFirst({
       where: { status: 'PUBLISHED' },
@@ -92,7 +124,6 @@ router.get('/antibiotics', async (req: Request, res: Response, next: NextFunctio
       ]);
 
       res.setHeader('X-Catalogue-Version', activeRelease.version);
-      res.setHeader('Cache-Control', 'public, max-age=120');
 
       const paginated = formatPaginatedResponse(
         generics.map(g => ({
@@ -101,8 +132,12 @@ router.get('/antibiotics', async (req: Request, res: Response, next: NextFunctio
           antibioticClass: g.antibioticClass,
           awareGroup: g.awareGroup,
           clinicalSource: g.clinicalSource,
-          referenceDosingGuidance: g.referenceDosingGuidance,
-          ageConsiderations: g.ageConsiderations,
+          // SEC-INV-005: Clinical dosing strictly withheld from non-verified audience
+          referenceDosingGuidance: isClinicianAudience ? g.referenceDosingGuidance : null,
+          patientNotice: isClinicianAudience
+            ? undefined
+            : 'ডোজ ও সেবনবিধি শুধুমাত্র আপনার চিকিৎসকের প্রেসক্রিপশন অনুযায়ী গ্রহণ করুন। ক্যাটালগের কোনো তথ্য প্রেসক্রিপশনের বিকল্প নয়।',
+          ageConsiderations: isClinicianAudience ? g.ageConsiderations : null,
           sideEffects: g.sideEffects,
           catalogueVersion: activeRelease.version,
           brands: g.brands.map(b => ({
@@ -120,7 +155,10 @@ router.get('/antibiotics', async (req: Request, res: Response, next: NextFunctio
       return res.json({
         ...paginated,
         version: activeRelease.version,
-        disclaimer: 'Adult reference guidance only; patient dosing must be individualized by prescriber.',
+        audience: isClinicianAudience ? 'CLINICIAN' : 'PATIENT_PUBLIC',
+        disclaimer: isClinicianAudience
+          ? 'Adult reference guidance only; patient dosing must be individualized by prescriber.'
+          : 'Adult reference guidance only; not for patient self-administration. রোগীর জন্য সতর্কতা: ওষুধের সঠিক মাত্রা ও সেবনকাল প্রেসক্রিপশনে চিকিৎসকের নির্দেশ অনুযায়ী গ্রহণ করুন।',
       });
     }
 
@@ -134,7 +172,13 @@ router.get('/antibiotics', async (req: Request, res: Response, next: NextFunctio
       }),
     ]);
 
-    res.json(formatPaginatedResponse(list, total, { page, limit, offset }));
+    const sanitizedList = list.map(a => ({
+      ...a,
+      doseDuration: isClinicianAudience ? a.doseDuration : null,
+      ageConsiderations: isClinicianAudience ? a.ageConsiderations : null,
+    }));
+
+    res.json(formatPaginatedResponse(sanitizedList, total, { page, limit, offset }));
   } catch (err) {
     next(err);
   }
@@ -143,9 +187,13 @@ router.get('/antibiotics', async (req: Request, res: Response, next: NextFunctio
 /**
  * GET /api/v1/catalogue/search
  * Fuzzy search across generic and brand names with candidate ranking and ambiguity detection.
+ * Phase 1 Invariant: Excludes patient-specific dosing guidance from search candidate output.
  */
 router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    res.setHeader('Vary', 'Authorization, Accept-Encoding');
+    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
+
     const q = String(req.query.q || '').trim();
     if (!q) {
       return res.json({
@@ -153,6 +201,7 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
         candidates: [],
         confidence: 0,
         isAmbiguous: false,
+        clinicalDisclaimer: 'Search candidates are for catalogue lookup only. Patient-specific dosing must be determined by a licensed prescriber.',
       });
     }
 
@@ -161,7 +210,10 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
       res.setHeader('X-Catalogue-Version', result.catalogueVersion);
     }
 
-    res.json(result);
+    res.json({
+      ...result,
+      clinicalDisclaimer: 'Search candidates are for catalogue lookup only. Patient-specific dosing must be determined by a licensed prescriber.',
+    });
   } catch (err) {
     next(err);
   }
@@ -170,10 +222,24 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
 /**
  * GET /api/v1/catalogue/generics/:id
  * Retrieve specific generic detail with brands and clinical reference guidance.
+ * 
+ * Security Invariant (SEC-INV-005):
+ * referenceDosingGuidance and ageConsiderations are strictly withheld unless the user
+ * has a verified clinician or pharmacist role in PostgreSQL.
  */
 router.get('/generics/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const isClinicianAudience = await resolveVerifiedClinicianAudience(req);
+
+    // Cache Isolation
+    res.setHeader('Vary', 'Authorization, Accept-Encoding');
+    if (isClinicianAudience) {
+      res.setHeader('Cache-Control', 'private, no-transform, max-age=60');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
+    }
+
     const generic = await prisma.medicineGeneric.findUnique({
       where: { id },
       include: {
@@ -192,13 +258,18 @@ router.get('/generics/:id', async (req: Request, res: Response, next: NextFuncti
       antibioticClass: generic.antibioticClass,
       awareGroup: generic.awareGroup,
       clinicalSource: generic.clinicalSource,
-      referenceDosingGuidance: generic.referenceDosingGuidance,
-      clinicalDisclaimer:
-        'General adult reference information only. Patient-specific dosing and duration must be confirmed by a licensed prescriber based on patient clinical assessment, age, weight, and renal/hepatic function.',
-      ageConsiderations: generic.ageConsiderations,
+      referenceDosingGuidance: isClinicianAudience ? generic.referenceDosingGuidance : null,
+      patientNotice: isClinicianAudience
+        ? undefined
+        : 'ডোজ ও সেবনবিধি শুধুমাত্র আপনার চিকিৎসকের প্রেসক্রিপশন অনুযায়ী গ্রহণ করুন। ক্যাটালগের কোনো তথ্য প্রেসক্রিপশনের বিকল্প নয়।',
+      clinicalDisclaimer: isClinicianAudience
+        ? 'General adult reference information only. Patient-specific dosing and duration must be confirmed by a licensed prescriber based on patient clinical assessment, age, weight, and renal/hepatic function.'
+        : 'Adult reference guidance only; not for patient self-administration. রোগীর জন্য সতর্কতা: ওষুধের সঠিক মাত্রা ও সেবনকাল প্রেসক্রিপশনে চিকিৎসকের নির্দেশ অনুযায়ী গ্রহণ করুন।',
+      ageConsiderations: isClinicianAudience ? generic.ageConsiderations : null,
       sideEffects: generic.sideEffects,
       catalogueVersion: generic.catalogueRelease.version,
       brands: generic.brands,
+      audience: isClinicianAudience ? 'CLINICIAN' : 'PATIENT_PUBLIC',
     });
   } catch (err) {
     next(err);
@@ -206,3 +277,4 @@ router.get('/generics/:id', async (req: Request, res: Response, next: NextFuncti
 });
 
 export const catalogueRouter = router;
+

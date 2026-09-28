@@ -129,16 +129,34 @@ async function runSuite() {
     assert(foundTables.includes('Antibiotic'), 'Antibiotic table verified in public schema');
 
     // -------------------------------------------------------------
-    // Setup: Seed Synthetic Users for Staging and Curation
+    // Setup: Seed Synthetic Users for Staging, Curation, and Role-Based Authorization
     // -------------------------------------------------------------
     const curatorUserId = `${SYN_PREFIX}curator_1`;
     const patientUserId = `${SYN_PREFIX}patient_1`;
+    const repUserId = `${SYN_PREFIX}rep_1`;
+    const docUnverifiedId = `${SYN_PREFIX}doc_unverified`;
+    const docSuspendedId = `${SYN_PREFIX}doc_suspended`;
+    const docVerifiedId = `${SYN_PREFIX}doc_verified`;
+    const pharmVerifiedId = `${SYN_PREFIX}pharm_verified`;
+    const allSyntheticUserIds = [
+      curatorUserId,
+      patientUserId,
+      repUserId,
+      docUnverifiedId,
+      docSuspendedId,
+      docVerifiedId,
+      pharmVerifiedId,
+    ];
+
     const defaultPasswordHash = hashPassword('TestPassword123!');
 
     // Clean prior runs if any
-    await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: [curatorUserId, patientUserId] } } });
-    await prisma.user.deleteMany({ where: { id: { in: [curatorUserId, patientUserId] } } });
+    await prisma.clinicianCredential.deleteMany({ where: { userId: { in: allSyntheticUserIds } } });
+    await prisma.pharmacistCredential.deleteMany({ where: { userId: { in: allSyntheticUserIds } } });
+    await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: allSyntheticUserIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: allSyntheticUserIds } } });
 
+    // 1. Curator (SUPERADMIN)
     await prisma.user.create({
       data: {
         id: curatorUserId,
@@ -157,6 +175,7 @@ async function runSuite() {
       },
     });
 
+    // 2. Patient
     await prisma.user.create({
       data: {
         id: patientUserId,
@@ -175,6 +194,130 @@ async function runSuite() {
       },
     });
 
+    // 3. Representative (Marketing / Sales)
+    await prisma.user.create({
+      data: {
+        id: repUserId,
+        email: `${repUserId}@medminders.local`,
+        passwordHash: defaultPasswordHash,
+        legacyRole: 'representative',
+        isActive: true,
+      },
+    });
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: repUserId,
+        role: 'PATIENT',
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+
+    // 4. Unverified Doctor (PENDING BMDC)
+    await prisma.user.create({
+      data: {
+        id: docUnverifiedId,
+        email: `${docUnverifiedId}@medminders.local`,
+        passwordHash: defaultPasswordHash,
+        legacyRole: 'doctor',
+        isActive: true,
+      },
+    });
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: docUnverifiedId,
+        role: 'DOCTOR',
+        isVerified: false,
+      },
+    });
+    await prisma.clinicianCredential.create({
+      data: {
+        userId: docUnverifiedId,
+        bmdcNumber: 'BMDC-TEST-PENDING-991',
+        verificationStatus: 'PENDING',
+      },
+    });
+
+    // 5. Suspended Doctor (SUSPENDED BMDC)
+    await prisma.user.create({
+      data: {
+        id: docSuspendedId,
+        email: `${docSuspendedId}@medminders.local`,
+        passwordHash: defaultPasswordHash,
+        legacyRole: 'doctor',
+        isActive: true,
+      },
+    });
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: docSuspendedId,
+        role: 'DOCTOR',
+        isVerified: true,
+      },
+    });
+    await prisma.clinicianCredential.create({
+      data: {
+        userId: docSuspendedId,
+        bmdcNumber: 'BMDC-TEST-SUSPENDED-992',
+        verificationStatus: 'SUSPENDED',
+      },
+    });
+
+    // 6. Verified Doctor (VERIFIED BMDC)
+    await prisma.user.create({
+      data: {
+        id: docVerifiedId,
+        email: `${docVerifiedId}@medminders.local`,
+        passwordHash: defaultPasswordHash,
+        legacyRole: 'doctor',
+        isActive: true,
+      },
+    });
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: docVerifiedId,
+        role: 'DOCTOR',
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+    await prisma.clinicianCredential.create({
+      data: {
+        userId: docVerifiedId,
+        bmdcNumber: 'BMDC-TEST-VERIFIED-993',
+        verificationStatus: 'VERIFIED',
+        verifiedAt: new Date(),
+      },
+    });
+
+    // 7. Verified Pharmacist (VERIFIED License)
+    await prisma.user.create({
+      data: {
+        id: pharmVerifiedId,
+        email: `${pharmVerifiedId}@medminders.local`,
+        passwordHash: defaultPasswordHash,
+        legacyRole: 'pharmacist',
+        isActive: true,
+      },
+    });
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: pharmVerifiedId,
+        role: 'PHARMACIST',
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+    await prisma.pharmacistCredential.create({
+      data: {
+        userId: pharmVerifiedId,
+        licenseNumber: 'PHARM-TEST-VERIFIED-994',
+        verificationStatus: 'VERIFIED',
+        verifiedAt: new Date(),
+      },
+    });
+
+    // Mint test JWTs
     const curatorJwt = signJwt({
       sub: curatorUserId,
       email: `${curatorUserId}@medminders.local`,
@@ -187,7 +330,38 @@ async function runSuite() {
       roles: [{ role: 'PATIENT', isVerified: true }],
     }, 3600);
 
-    assert(true, 'Seeded synthetic curator (SUPERADMIN) and patient users in PostgreSQL');
+    const repJwt = signJwt({
+      sub: repUserId,
+      email: `${repUserId}@medminders.local`,
+      roles: [{ role: 'PATIENT', isVerified: true }],
+    }, 3600);
+
+    const docUnverifiedJwt = signJwt({
+      sub: docUnverifiedId,
+      email: `${docUnverifiedId}@medminders.local`,
+      roles: [{ role: 'DOCTOR', isVerified: false }],
+    }, 3600);
+
+    const docSuspendedJwt = signJwt({
+      sub: docSuspendedId,
+      email: `${docSuspendedId}@medminders.local`,
+      roles: [{ role: 'DOCTOR', isVerified: true }],
+    }, 3600);
+
+    const docVerifiedJwt = signJwt({
+      sub: docVerifiedId,
+      email: `${docVerifiedId}@medminders.local`,
+      roles: [{ role: 'DOCTOR', isVerified: true }],
+    }, 3600);
+
+    const pharmVerifiedJwt = signJwt({
+      sub: pharmVerifiedId,
+      email: `${pharmVerifiedId}@medminders.local`,
+      roles: [{ role: 'PHARMACIST', isVerified: true }],
+    }, 3600);
+
+    assert(true, 'Seeded synthetic users across all roles in PostgreSQL (Curator, Patient, Rep, Unverified/Suspended/Verified Doc, Verified Pharm)');
+
 
     // -------------------------------------------------------------
     // PART 2: Malformed XLSX Rows, Duplicate Brands, and Rejection Lifecycle
@@ -392,9 +566,9 @@ async function runSuite() {
     }
 
     // -------------------------------------------------------------
-    // PART 6: Express HTTP API & RFC 8594 / 9213 Deprecation Headers
+    // PART 6: Express HTTP API, SEC-INV-005 Audience Authorization & Cache Isolation
     // -------------------------------------------------------------
-    console.log('\n--- PART 6: Express HTTP API & Deprecation Headers ---');
+    console.log('\n--- PART 6: Express HTTP API, SEC-INV-005 Audience Authorization & Cache Isolation ---');
 
     await new Promise((resolve) => {
       server = app.listen(0, () => {
@@ -416,22 +590,276 @@ async function runSuite() {
     assert(versionRes.json.version === 'v999.1.0', `Reported active catalogue version: ${versionRes.json.version}`);
     assert(versionRes.json.source.includes('syn_cat_v1.xlsx'), 'Reported classification source provenance');
 
-    // 2. GET /api/v1/catalogue/antibiotics
-    const antibioticsRes = await httpRequest({
+    // 2. GET /api/v1/catalogue/antibiotics - SEC-INV-005 Multi-Role Audience Audit
+    console.log('\n  [SEC-INV-005 Multi-Role Audience Audit: /api/v1/catalogue/antibiotics]');
+
+    // 2a. Anonymous Caller (No token)
+    const anonRes = await httpRequest({
       hostname: '127.0.0.1',
       port: serverPort,
       path: '/api/v1/catalogue/antibiotics',
       method: 'GET',
     });
-    assert(antibioticsRes.statusCode === 200, 'GET /api/v1/catalogue/antibiotics returned HTTP 200');
-    const antibioticItems = antibioticsRes.json.data || antibioticsRes.json.items || [];
-    assert(antibioticItems.length >= 2, `Returned ${antibioticItems.length} catalogue generic items`);
+    assert(anonRes.statusCode === 200, 'Anonymous GET /catalogue/antibiotics returns HTTP 200');
+    assert(anonRes.json.audience === 'PATIENT_PUBLIC', 'Anonymous caller derived as PATIENT_PUBLIC audience');
+    const anonItems = anonRes.json.data || anonRes.json.items || [];
+    assert(anonItems.length >= 2, `Anonymous received ${anonItems.length} catalogue items`);
     assert(
-      (antibioticsRes.json.disclaimer || '').includes('Adult reference guidance only'),
-      'Returned mandatory clinical reference guidance disclaimer'
+      anonItems.every(i => i.referenceDosingGuidance === null),
+      'Anonymous caller strictly receives referenceDosingGuidance: null on all items'
+    );
+    assert(
+      anonItems.every(i => i.ageConsiderations === null),
+      'Anonymous caller strictly receives ageConsiderations: null on all items'
+    );
+    assert(
+      (anonRes.headers['vary'] || '').includes('Authorization'),
+      'Cache Isolation: Vary header includes Authorization'
+    );
+    assert(
+      (anonRes.headers['cache-control'] || '').includes('public'),
+      'Cache Isolation: Public Cache-Control set for anonymous response'
+    );
+    assert(
+      !(anonRes.headers['cache-control'] || '').includes('private'),
+      'Cache Isolation: Anonymous response is NOT marked private'
     );
 
-    // 3. GET /api/v1/catalogue/search?q=amox
+    // 2b. Anonymous Caller attempting client spoof: ?audience=clinician
+    const anonSpoofRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics?audience=clinician',
+      method: 'GET',
+    });
+    assert(anonSpoofRes.statusCode === 200, 'Anonymous spoof ?audience=clinician returns HTTP 200');
+    assert(
+      anonSpoofRes.json.audience === 'PATIENT_PUBLIC',
+      'Client ?audience=clinician COMPLETELY IGNORED; derived audience remains PATIENT_PUBLIC'
+    );
+    const anonSpoofItems = anonSpoofRes.json.data || anonSpoofRes.json.items || [];
+    assert(
+      anonSpoofItems.every(i => i.referenceDosingGuidance === null),
+      'Anonymous spoof caller strictly receives referenceDosingGuidance: null (Zero Leakage)'
+    );
+
+    // 2c. Patient Caller (Valid JWT, role: PATIENT) passing ?audience=clinician
+    const patientRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics?audience=clinician',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${patientJwt}` },
+    });
+    assert(patientRes.statusCode === 200, 'Patient GET /catalogue/antibiotics returns HTTP 200');
+    assert(patientRes.json.audience === 'PATIENT_PUBLIC', 'Patient user derived as PATIENT_PUBLIC audience');
+    const patientItems = patientRes.json.data || patientRes.json.items || [];
+    assert(
+      patientItems.every(i => i.referenceDosingGuidance === null),
+      'Patient user strictly receives referenceDosingGuidance: null even with ?audience=clinician'
+    );
+
+    // 2d. Representative Caller (Valid JWT, role: representative/patient) passing ?audience=clinician
+    const repRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics?audience=clinician',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${repJwt}` },
+    });
+    assert(repRes.statusCode === 200, 'Representative GET /catalogue/antibiotics returns HTTP 200');
+    assert(repRes.json.audience === 'PATIENT_PUBLIC', 'Representative derived as PATIENT_PUBLIC audience');
+    const repItems = repRes.json.data || repRes.json.items || [];
+    assert(
+      repItems.every(i => i.referenceDosingGuidance === null),
+      'Representative strictly receives referenceDosingGuidance: null'
+    );
+
+    // 2e. Unverified Doctor Caller (role: DOCTOR, ClinicianCredential: PENDING)
+    const docUnverifiedRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics?audience=clinician',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docUnverifiedJwt}` },
+    });
+    assert(docUnverifiedRes.statusCode === 200, 'Unverified doctor GET /catalogue/antibiotics returns HTTP 200');
+    assert(docUnverifiedRes.json.audience === 'PATIENT_PUBLIC', 'Unverified doctor derived as PATIENT_PUBLIC');
+    const docUnverifiedItems = docUnverifiedRes.json.data || docUnverifiedRes.json.items || [];
+    assert(
+      docUnverifiedItems.every(i => i.referenceDosingGuidance === null),
+      'Unverified doctor strictly receives referenceDosingGuidance: null'
+    );
+
+    // 2f. Suspended Doctor Caller (role: DOCTOR, ClinicianCredential: SUSPENDED)
+    const docSuspendedRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics?audience=clinician',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docSuspendedJwt}` },
+    });
+    assert(docSuspendedRes.statusCode === 200, 'Suspended doctor GET /catalogue/antibiotics returns HTTP 200');
+    assert(docSuspendedRes.json.audience === 'PATIENT_PUBLIC', 'Suspended doctor derived as PATIENT_PUBLIC');
+    const docSuspendedItems = docSuspendedRes.json.data || docSuspendedRes.json.items || [];
+    assert(
+      docSuspendedItems.every(i => i.referenceDosingGuidance === null),
+      'Suspended doctor strictly receives referenceDosingGuidance: null'
+    );
+
+    // 2g. Verified Doctor Caller (role: DOCTOR, ClinicianCredential: VERIFIED)
+    const docVerifiedRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docVerifiedJwt}` },
+    });
+    assert(docVerifiedRes.statusCode === 200, 'Verified doctor GET /catalogue/antibiotics returns HTTP 200');
+    assert(docVerifiedRes.json.audience === 'CLINICIAN', 'Verified doctor derived as CLINICIAN audience');
+    const docVerifiedItems = docVerifiedRes.json.data || docVerifiedRes.json.items || [];
+    assert(
+      docVerifiedItems.some(i => typeof i.referenceDosingGuidance === 'string' && i.referenceDosingGuidance.length > 0),
+      'Verified doctor receives referenceDosingGuidance'
+    );
+    assert(
+      (docVerifiedRes.headers['cache-control'] || '').includes('private'),
+      'Cache Isolation: Verified doctor response marked Cache-Control: private'
+    );
+    assert(
+      (docVerifiedRes.headers['vary'] || '').includes('Authorization'),
+      'Cache Isolation: Verified doctor response includes Vary: Authorization'
+    );
+
+    // 2h. Verified Pharmacist Caller (role: PHARMACIST, PharmacistCredential: VERIFIED)
+    const pharmVerifiedRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/catalogue/antibiotics',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${pharmVerifiedJwt}` },
+    });
+    assert(pharmVerifiedRes.statusCode === 200, 'Verified pharmacist GET /catalogue/antibiotics returns HTTP 200');
+    assert(pharmVerifiedRes.json.audience === 'CLINICIAN', 'Verified pharmacist derived as CLINICIAN audience');
+    const pharmVerifiedItems = pharmVerifiedRes.json.data || pharmVerifiedRes.json.items || [];
+    assert(
+      pharmVerifiedItems.some(i => typeof i.referenceDosingGuidance === 'string' && i.referenceDosingGuidance.length > 0),
+      'Verified pharmacist receives referenceDosingGuidance'
+    );
+    assert(
+      (pharmVerifiedRes.headers['cache-control'] || '').includes('private'),
+      'Cache Isolation: Verified pharmacist response marked Cache-Control: private'
+    );
+
+    // 3. Detail Endpoint: GET /api/v1/catalogue/generics/:id
+    console.log('\n  [SEC-INV-005 Detail Endpoint Audit: /api/v1/catalogue/generics/:id]');
+    const amoxGenId = amoxGen.id;
+
+    // 3a. Anonymous caller to detail endpoint
+    const anonDetailRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: `/api/v1/catalogue/generics/${amoxGenId}`,
+      method: 'GET',
+    });
+    assert(anonDetailRes.statusCode === 200, 'Anonymous GET /catalogue/generics/:id returns HTTP 200');
+    assert(anonDetailRes.json.audience === 'PATIENT_PUBLIC', 'Anonymous detail caller derived as PATIENT_PUBLIC');
+    assert(anonDetailRes.json.referenceDosingGuidance === null, 'Anonymous detail caller receives referenceDosingGuidance: null');
+    assert(anonDetailRes.json.ageConsiderations === null, 'Anonymous detail caller receives ageConsiderations: null');
+    assert(typeof anonDetailRes.json.patientNotice === 'string', 'Patient advisory notice present on detail view');
+    assert((anonDetailRes.headers['cache-control'] || '').includes('public'), 'Cache Isolation: Detail response is public for anonymous');
+
+    // 3b. Patient caller spoofing ?audience=clinician on detail endpoint
+    const patientDetailRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: `/api/v1/catalogue/generics/${amoxGenId}?audience=clinician`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${patientJwt}` },
+    });
+    assert(patientDetailRes.statusCode === 200, 'Patient GET /catalogue/generics/:id returns HTTP 200');
+    assert(patientDetailRes.json.audience === 'PATIENT_PUBLIC', 'Patient spoof derived as PATIENT_PUBLIC');
+    assert(patientDetailRes.json.referenceDosingGuidance === null, 'Patient spoof receives referenceDosingGuidance: null');
+
+    // 3c. Suspended Doctor on detail endpoint
+    const docSuspendedDetailRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: `/api/v1/catalogue/generics/${amoxGenId}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docSuspendedJwt}` },
+    });
+    assert(docSuspendedDetailRes.statusCode === 200, 'Suspended doctor detail returns HTTP 200');
+    assert(docSuspendedDetailRes.json.audience === 'PATIENT_PUBLIC', 'Suspended doctor derived as PATIENT_PUBLIC');
+    assert(docSuspendedDetailRes.json.referenceDosingGuidance === null, 'Suspended doctor receives referenceDosingGuidance: null');
+
+    // 3d. Verified Doctor on detail endpoint
+    const docVerifiedDetailRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: `/api/v1/catalogue/generics/${amoxGenId}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docVerifiedJwt}` },
+    });
+    assert(docVerifiedDetailRes.statusCode === 200, 'Verified doctor detail returns HTTP 200');
+    assert(docVerifiedDetailRes.json.audience === 'CLINICIAN', 'Verified doctor derived as CLINICIAN');
+    assert(
+      typeof docVerifiedDetailRes.json.referenceDosingGuidance === 'string' && docVerifiedDetailRes.json.referenceDosingGuidance.length > 0,
+      'Verified doctor receives full referenceDosingGuidance on detail view'
+    );
+    assert((docVerifiedDetailRes.headers['cache-control'] || '').includes('private'), 'Cache Isolation: Verified doctor detail is private');
+
+    // 4. Antibiotics Endpoint: GET /api/v1/antibiotics (and legacy /api/antibiotics)
+    console.log('\n  [SEC-INV-005 Antibiotics Endpoint Audit: /api/v1/antibiotics]');
+
+    // 4a. Anonymous caller to /api/v1/antibiotics
+    const anonAbRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/antibiotics?audience=clinician',
+      method: 'GET',
+    });
+    assert(anonAbRes.statusCode === 200, 'Anonymous GET /api/v1/antibiotics returns HTTP 200');
+    const anonAbItems = anonAbRes.json.data || anonAbRes.json.items || [];
+    assert(
+      anonAbItems.every(a => a.doseDuration === null),
+      'Anonymous caller to /api/v1/antibiotics strictly receives doseDuration: null on all records'
+    );
+    assert((anonAbRes.headers['cache-control'] || '').includes('public'), 'Cache Isolation: /api/v1/antibiotics is public for anonymous');
+
+    // 4b. Verified Doctor caller to /api/v1/antibiotics
+    const docAbRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/v1/antibiotics',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${docVerifiedJwt}` },
+    });
+    assert(docAbRes.statusCode === 200, 'Verified doctor GET /api/v1/antibiotics returns HTTP 200');
+    const docAbItems = docAbRes.json.data || docAbRes.json.items || [];
+    assert(
+      docAbItems.some(a => typeof a.doseDuration === 'string' && a.doseDuration.length > 0),
+      'Verified doctor caller to /api/v1/antibiotics receives populated doseDuration'
+    );
+    assert((docAbRes.headers['cache-control'] || '').includes('private'), 'Cache Isolation: /api/v1/antibiotics is private for clinician');
+
+    // 4c. Legacy alias: GET /api/antibiotics
+    const legacyAbRes = await httpRequest({
+      hostname: '127.0.0.1',
+      port: serverPort,
+      path: '/api/antibiotics',
+      method: 'GET',
+    });
+    assert(legacyAbRes.statusCode === 200, 'Legacy GET /api/antibiotics returns HTTP 200');
+    assert(legacyAbRes.headers['deprecation'] === 'true', 'Legacy alias returns RFC 8594 Deprecation header');
+    const legacyAbItems = legacyAbRes.json.data || legacyAbRes.json.items || [];
+    assert(
+      legacyAbItems.every(a => a.doseDuration === null),
+      'Anonymous caller to legacy /api/antibiotics strictly receives doseDuration: null'
+    );
+
+    // 5. Search endpoint: GET /api/v1/catalogue/search?q=amox
+    console.log('\n  [SEC-INV-005 Search Endpoint Audit: /api/v1/catalogue/search]');
     const searchRes = await httpRequest({
       hostname: '127.0.0.1',
       port: serverPort,
@@ -439,13 +867,19 @@ async function runSuite() {
       method: 'GET',
     });
     assert(searchRes.statusCode === 200, 'GET /api/v1/catalogue/search returned HTTP 200');
+    assert((searchRes.headers['cache-control'] || '').includes('public'), 'Search Cache-Control is public');
     const searchCandidates = searchRes.json.candidates || searchRes.json.items || [];
     assert(
       searchCandidates.some(c => (c.genericName || '').toLowerCase().includes('amoxicillin')),
       'Search returned matching amoxicillin generic'
     );
+    assert(
+      searchCandidates.every(c => c.referenceDosingGuidance === undefined && c.doseDuration === undefined),
+      'Search candidates contain zero dosing guidance fields'
+    );
 
-    // 4. Admin route access control: POST /api/v1/admin/catalogue/import/stage
+    // 6. Admin route access control: POST /api/v1/admin/catalogue/import/stage
+    console.log('\n  [Admin Staging Guard Verification]');
     const unauthStageRes = await httpRequest({
       hostname: '127.0.0.1',
       port: serverPort,
@@ -467,7 +901,7 @@ async function runSuite() {
     }, {});
     assert(patientStageRes.statusCode === 403, 'Patient staging request rejected with HTTP 403 Forbidden');
 
-    // 5. Deprecated legacy alias: GET /api/catalogue/version
+    // 7. Deprecated legacy alias: GET /api/catalogue/version
     const legacyRes = await httpRequest({
       hostname: '127.0.0.1',
       port: serverPort,
@@ -483,6 +917,7 @@ async function runSuite() {
     );
 
   } finally {
+
     // -------------------------------------------------------------
     // PART 7: 100% Database Cleanup & Zero Residuals Guarantee
     // -------------------------------------------------------------
@@ -534,7 +969,13 @@ async function runSuite() {
         },
       });
 
-      // 5. Delete synthetic users
+      // 5. Delete synthetic credentials and users
+      await prisma.clinicianCredential.deleteMany({
+        where: { userId: { startsWith: 'syn_cat_' } },
+      });
+      await prisma.pharmacistCredential.deleteMany({
+        where: { userId: { startsWith: 'syn_cat_' } },
+      });
       await prisma.userRoleAssignment.deleteMany({
         where: { userId: { startsWith: 'syn_cat_' } },
       });
@@ -561,6 +1002,12 @@ async function runSuite() {
       const resUsers = await prisma.user.count({
         where: { id: { startsWith: 'syn_cat_' } },
       });
+      const resClinicians = await prisma.clinicianCredential.count({
+        where: { userId: { startsWith: 'syn_cat_' } },
+      });
+      const resPharmacists = await prisma.pharmacistCredential.count({
+        where: { userId: { startsWith: 'syn_cat_' } },
+      });
 
       assert(resReleases === 0, 'Residual synthetic releases in PostgreSQL: 0');
       assert(resGenerics === 0, 'Residual synthetic generics in PostgreSQL: 0');
@@ -568,6 +1015,9 @@ async function runSuite() {
       assert(resBatches === 0, 'Residual synthetic batches in PostgreSQL: 0');
       assert(resAntibiotics === 0, 'Residual synthetic antibiotic projections in PostgreSQL: 0');
       assert(resUsers === 0, 'Residual synthetic users in PostgreSQL: 0');
+      assert(resClinicians === 0, 'Residual synthetic clinician credentials in PostgreSQL: 0');
+      assert(resPharmacists === 0, 'Residual synthetic pharmacist credentials in PostgreSQL: 0');
+
 
       console.log('\n================================================================');
       console.log(`  PROMPT E TEST SUITE SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);

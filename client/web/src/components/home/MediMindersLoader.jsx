@@ -1,148 +1,36 @@
-import { motion } from 'framer-motion';
-import { FaHeartbeat, FaClinicMedical, FaRegHeart } from 'react-icons/fa';
+import { FaShieldAlt } from 'react-icons/fa';
 
 const MediMindersLoader = () => {
-  const pulseVariants = {
-    initial: { scale: 1 },
-    animate: { 
-      scale: [1, 1.1, 1],
-      transition: { 
-        repeat: Infinity,
-        duration: 1.5,
-        ease: "easeInOut"
-      }
-    }
-  };
-
-  const heartbeatVariants = {
-    initial: { scale: 1 },
-    animate: {
-      scale: [1, 1.3, 1],
-      transition: {
-        repeat: Infinity,
-        duration: 1.2,
-        ease: "easeInOut"
-      }
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-white bg-opacity-95 flex flex-col items-center justify-center z-50 space-y-8">
-      {/* Animated Medical Logo */}
-      <motion.div
-        initial={{ scale: 0.8 }}
-        animate={{ scale: 1 }}
-        transition={{
-          repeat: Infinity,
-          repeatType: "reverse",
-          duration: 1.8,
-          ease: "easeInOut"
-        }}
-        className="relative"
-      >
-        <div className="relative w-32 h-32">
-          {/* Pulse Circle */}
-          <motion.div
-            variants={pulseVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute inset-0 rounded-full bg-gradient-to-tr from-red-400 to-green-400 opacity-20"
-          />
-          
-          {/* Heartbeat Icon */}
-          <motion.div
-            variants={heartbeatVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <FaHeartbeat className="text-6xl text-red-500" />
-          </motion.div>
-          
-          {/* Clinic Icon */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="absolute -bottom-2 -right-2"
-          >
-            <FaClinicMedical className="text-3xl text-green-500" />
-          </motion.div>
+    <div className="fixed inset-0 bg-[#F4F8FA] flex flex-col items-center justify-center z-50 p-4">
+      <div className="bg-white p-8 rounded-2xl border border-[#D1E3EB] shadow-lg max-w-sm w-full text-center">
+        {/* Authoritative Badge Icon */}
+        <div className="w-16 h-16 rounded-2xl bg-[#E0F2F1] text-[#028090] flex items-center justify-center mx-auto mb-4 border border-[#00A896]/30">
+          <FaShieldAlt className="text-3xl animate-pulse" />
         </div>
-      </motion.div>
 
-      {/* Health is Wealth Message */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="text-center space-y-4"
-      >
-        <motion.h3
-          animate={{ 
-            textShadow: ["0 0 0px #10b981", "0 0 10px #10b981", "0 0 0px #10b981"],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 2,
-            ease: "easeInOut"
-          }}
-          className="text-3xl font-bold text-gray-800"
-        >
-          Health is Wealth
-        </motion.h3>
-        
-        <p className="text-gray-600">Loading your medical resources...</p>
-      </motion.div>
+        {/* Brand Title */}
+        <h2 className="text-xl font-bold text-[#102A43]">
+          Med<span className="text-[#028090]">Minders</span>
+        </h2>
+        <p className="text-xs font-semibold text-[#0F3A66] mt-0.5">
+          বাংলাদেশ জাতীয় এএমআর ও প্রেসক্রিপশন প্ল্যাটফর্ম
+        </p>
 
-      {/* Animated Hearts Progress */}
-      <div className="flex space-x-3">
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ scale: 0.7, opacity: 0.5 }}
-            animate={{ 
-              scale: [0.7, 1.2, 0.7],
-              opacity: [0.5, 1, 0.5],
-              y: [0, -10, 0]
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 1.5,
-              delay: i * 0.2,
-              ease: "easeInOut"
-            }}
-          >
-            <FaRegHeart className="text-2xl text-pink-500" />
-          </motion.div>
-        ))}
+        {/* Status Message */}
+        <p className="text-xs text-[#627D98] mt-4 mb-4">
+          ক্লিনিকাল ডেটা ও ক্যাটালগ সিঙ্ক্রোনাইজ হচ্ছে... অনুগ্রহ করে অপেক্ষা করুন।
+        </p>
+
+        {/* Minimal Accessible Progress Bar */}
+        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-[#028090] h-full w-2/3 rounded-full animate-pulse"></div>
+        </div>
+
+        <span className="text-[11px] text-slate-400 mt-3 block">
+          DGDA / WHO AWaRe 2024 কমপ্লায়েন্ট
+        </span>
       </div>
-
-      {/* Progress Bar */}
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: "80%" }}
-        transition={{
-          duration: 3,
-          ease: "easeInOut"
-        }}
-        className="h-2 bg-gray-200 rounded-full overflow-hidden max-w-md"
-      >
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{
-            repeat: Infinity,
-            repeatType: "reverse",
-            duration: 2,
-            ease: "easeInOut"
-          }}
-          className="h-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500"
-        />
-      </motion.div>
     </div>
   );
 };

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import http from 'http';
 import { app } from '../app.js';
 import { getDataStore, InMemoryClinicalDataStore, setTestDataStore } from '../services/auth/dataStore.js';
 import { TokenService } from '../services/auth/tokenService.js';
 import { AuditService } from '../services/audit/auditService.js';
+import { assertMfaProductionSafety } from '../services/auth/mfaService.js';
 
 let server: http.Server;
 let baseUrl: string;
@@ -341,6 +342,27 @@ describe('Slice 4: Authentication, Session Rotation, and Object-Level Authorizat
       const scan = await res.json();
       expect(scan.id).toBe('scan_patient_a_1');
       expect(scan.scanStatus).toBe('DRAFT_UNREVIEWED');
+    });
+  });
+
+  // -------------------------------------------------------------
+  // 7. Security Invariant: Fail-Closed Production MFA (SEC-INV-004)
+  // -------------------------------------------------------------
+  describe('Security Invariant: Fail-Closed Production MFA (SEC-INV-004)', () => {
+    const originalEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('throws fatal error in production if DevelopmentMockMfaProvider is active (zero bypass permitted)', () => {
+      process.env.NODE_ENV = 'production';
+      expect(() => assertMfaProductionSafety()).toThrow(/FATAL_SECURITY_BLOCKER/);
+    });
+
+    it('passes in test or development environment with default mock provider', () => {
+      process.env.NODE_ENV = 'test';
+      expect(() => assertMfaProductionSafety()).not.toThrow();
     });
   });
 });

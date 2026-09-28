@@ -18,7 +18,54 @@ export const app = express();
 // 1. Foundational Request Infrastructure
 app.use(requestIdMiddleware);
 app.use(requestLogger);
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
+
+// CORS Configuration for Vercel Preview/Production, Localhost, and Native Mobile
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'https://medminders.vercel.app',
+];
+
+const envOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const allowedOriginsSet = new Set([...defaultAllowedOrigins, ...envOrigins]);
+const vercelPreviewRegex = /^https:\/\/(medminders(-[a-z0-9_-]+)?|.*-mahadi200s-projects)\.vercel\.app$/i;
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow non-browser requests (e.g. Expo mobile app, curl, Render health probes)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOriginsSet.has(origin)) {
+        return callback(null, true);
+      }
+
+      if (vercelPreviewRegex.test(origin)) {
+        return callback(null, true);
+      }
+
+      if (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Client-Version', 'Accept', 'Origin'],
+    exposedHeaders: ['X-Request-Id', 'Deprecation', 'Sunset', 'Link', 'Vary'],
+    maxAge: 86400,
+  })
+);
+
 app.use(express.json({ limit: '10mb' }));
 
 /**

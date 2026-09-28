@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: medminders-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health/live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MFA_PROVIDER
+        value: totp
+      - key: CORS_ORIGIN
+        value: https://medminders.vercel.app
+      - key: DATABASE_URL
+        sync: false # Sensitive secret: Provide Supabase Session Pooler URI (port 5432) in Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Sensitive secret: High-entropy 256-bit random secret in Render Dashboard
+      - key: MFA_TOTP_KEY
+        generateValue: true # Render generates an isolated high-entropy secret for TOTP HMAC derivation
