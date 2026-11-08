@@ -67,5 +67,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'clinician.audience' => \App\Http\Middleware\ClinicianAudience::class,
         'phi.logging' => \App\Http\Middleware\PHILogging::class,
+        'mfa.ready' => \App\Http\Middleware\MfaEnrollmentComplete::class,
     ];
 }

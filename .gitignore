@@ -32,3 +32,11 @@ supabase.text
 
 # Excel temporary files
 ~$*
+
+# Demo/sample artefacts — never commit
+docs/demo-video/
+*.webm
+*.mp4
+server/storage/app/demo-credentials.local.txt
+SAMPLE_ACCOUNTS.md
+**/SAMPLE_ACCOUNTS.md

@@ -19,8 +19,10 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'name',
         'email',
         'phone_number',
+        'pending_phone_number',
         'password',
         'is_active',
     ];
@@ -33,6 +35,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'mfa_secret_encrypted',
     ];
 
     /**
@@ -59,7 +62,6 @@ class User extends Authenticatable
     public function isVerifiedClinician(): bool
     {
         return ($this->hasRole('DOCTOR') && $this->clinicianCredential?->verification_status === 'VERIFIED')
-            || ($this->hasRole('PHARMACIST') && $this->pharmacistCredential?->verification_status === 'VERIFIED')
-            || $this->hasRole('HOSPITAL_ADMIN') || $this->hasRole('SUPERADMIN');
+            || ($this->hasRole('PHARMACIST') && $this->pharmacistCredential?->verification_status === 'VERIFIED');
     }
 }

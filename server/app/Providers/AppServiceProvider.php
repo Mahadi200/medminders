@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
+use App\Services\DrugInteractionProvider;
+use App\Services\UnavailableDrugInteractionProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(DrugInteractionProvider::class, UnavailableDrugInteractionProvider::class);
     }
 
     /**

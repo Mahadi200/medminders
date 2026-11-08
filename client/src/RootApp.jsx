@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Home from './pages/Home';
 import AboutPage from './pages/AboutPage';
@@ -7,11 +7,14 @@ import Contact from './pages/Contact';
 import DoctorAuth from './components/home/DoctorAuth';
 import DocLayout from './components/home/Doctor/DocLayout';
 
-import MediMindersLoader from './components/home/MediMindersLoader'; // Make sure to create this component
 import PatientDashboard from './components/home/Patient/PatientDashboard';
 import MedMindersHospitalDashboard from './components/home/Hospital/MedMindersHospitalDashboard';
 import PharmacyDashboard from './components/home/Pharmacy/PharmacyDashboard'; 
 import { AppPreferencesProvider } from './context/AppPreferences';
+import ConnectedPortal from './pages/ConnectedPortal';
+import AmrAwareness from './pages/AmrAwareness';
+import TeamPage from './pages/TeamPage';
+import MediMindersLoader from './components/home/MediMindersLoader';
 
 const router = createBrowserRouter([
   {
@@ -31,47 +34,51 @@ const router = createBrowserRouter([
     element:<Contact/>,
   },
   {
+    path: "/amr-awareness",
+    element: <AmrAwareness/>,
+  },
+  { path: "/team", element: <TeamPage/> },
+  {
     path: "/DoctorAuth",
-    element: <DoctorAuth/>,
+    element: <ConnectedPortal/>,
     
   },
   {
         path : "/doctor-layout",
-        element: <DocLayout/>,
+        element: <ConnectedPortal/>,
   },
   {
         path : "/patient-login",
-        element: <PatientDashboard/>,
+        element: <ConnectedPortal/>,
   },
+  { path: "/patient-register", element: <ConnectedPortal/> },
+  { path: "/patient-otp", element: <ConnectedPortal/> },
+  { path: "/patient-claim", element: <ConnectedPortal/> },
+  { path: "/doctor-login", element: <ConnectedPortal/> },
+  { path: "/doctor-register", element: <ConnectedPortal/> },
   {
         path : "/hospital-login",
-        element: <MedMindersHospitalDashboard/>,
+        element: <ConnectedPortal/>,
   }
   ,
   {
         path : "/pharmacy-login",
-        element: <PharmacyDashboard/>,
+        element: <ConnectedPortal/>,
   }
+  ,
+  { path: "/pharmacy-register", element: <ConnectedPortal/> }
 ]);
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
-
+  const [booting, setBooting] = useState(true);
   useEffect(() => {
-    // Simulate loading time (replace with actual loading logic)
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000); 
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(() => setBooting(false), 1800);
+    return () => window.clearTimeout(timer);
   }, []);
-
   return (
     <AppPreferencesProvider>
-      {isLoading ? (
-        <MediMindersLoader />
-      ) : (
-        <RouterProvider router={router} />
-      )}
+      {booting && <MediMindersLoader />}
+      <RouterProvider router={router} />
     </AppPreferencesProvider>
   );
 }

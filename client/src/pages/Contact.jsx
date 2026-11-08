@@ -1,12 +1,7 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { FaEnvelope, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
-import Navbar from '../components/home/Navbar';
-import Footer from '../components/home/Footer';
+import PublicLayout from '../components/public/PublicLayout';
+import PageHeader from '../components/public/PageHeader';
 
-const Contact = () => {
-  const [sent, setSent] = useState(false);
-  return <div className="min-h-screen bg-[#F4F8FA]"><Navbar /><main className="max-w-6xl mx-auto px-4 py-16"><motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12"><h1 className="text-4xl font-extrabold text-[#0A2342]">Contact MedMinders</h1><p className="text-[#627D98] mt-3">Questions about the platform? Our support team is ready to help.</p></motion.div><div className="grid md:grid-cols-2 gap-8"><div className="bg-[#0A2342] text-white rounded-2xl p-8"><h2 className="text-2xl font-bold">Get in touch</h2><div className="space-y-5 mt-8 text-slate-200"><p className="flex gap-3 items-center"><FaPhone className="text-[#00A896]" /> Emergency: 999</p><p className="flex gap-3 items-center"><FaEnvelope className="text-[#00A896]" /> support@medminders.local</p><p className="flex gap-3 items-center"><FaMapMarkerAlt className="text-[#00A896]" /> Dhaka, Bangladesh</p></div></div><form onSubmit={(event) => { event.preventDefault(); setSent(true); }} className="bg-white rounded-2xl p-8 border border-[#D1E3EB] shadow-sm space-y-4"><input required className="w-full rounded-lg border border-[#D1E3EB] p-3" placeholder="Your name" /><input required type="email" className="w-full rounded-lg border border-[#D1E3EB] p-3" placeholder="Email address" /><textarea required className="w-full rounded-lg border border-[#D1E3EB] p-3" rows="5" placeholder="How can we help?" /><button className="w-full rounded-lg bg-[#028090] text-white font-bold py-3 hover:bg-[#00A896]">{sent ? 'Message sent' : 'Send message'}</button></form></div></main><Footer /></div>;
-};
-
-export default Contact;
+export default function Contact() {
+  return <PublicLayout><PageHeader eyebrow="Contact" title="Questions about the platform?" description="Use the verified contact details below. This page does not claim to send messages because no contact-form backend is configured." /><section className="mx-auto grid max-w-6xl gap-6 px-5 py-16 md:grid-cols-2"><div className="mm-surface bg-[#0a2342] p-8 text-white"><h2 className="text-2xl font-bold">Platform support</h2><div className="mt-8 space-y-5 text-slate-200"><p className="flex items-center gap-3"><FaEnvelope className="text-cyan-300" /> support@medminders.local</p><p className="flex items-center gap-3"><FaMapMarkerAlt className="text-cyan-300" /> Dhaka, Bangladesh</p><p className="flex items-center gap-3"><FaPhone className="text-cyan-300" /> Emergency services: 999</p></div></div><div className="mm-surface p-8"><h2 className="text-2xl font-bold">Send an email</h2><p className="mm-muted mt-3 leading-relaxed">For a support request, open your email client using the button below. No message is silently reported as sent.</p><a className="mm-button mm-button-primary mt-6" href="mailto:support@medminders.local?subject=MedMinders%20support">Open email client</a></div></section></PublicLayout>;
+}

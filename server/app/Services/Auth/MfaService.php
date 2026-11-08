@@ -14,7 +14,9 @@ class MfaService
 
     public function requiresMfa(User $user): bool
     {
-        return collect(['DOCTOR', 'PHARMACIST', 'HOSPITAL_ADMIN', 'SUPERADMIN'])->contains(fn ($role) => $user->hasRole($role));
+        if (config('mfa.demo_disable_enrollment') && ! app()->environment('production')) return false;
+        return collect(['DOCTOR', 'PHARMACIST', 'HOSPITAL_ADMIN', 'SUPERADMIN'])->contains(fn ($role) => $user->hasRole($role))
+            || \Illuminate\Support\Facades\DB::table('organization_memberships')->where('user_id', $user->id)->where('is_active', true)->exists();
     }
 
     public function verify(User $user, string $code, ?string $secret = null): bool

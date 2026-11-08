@@ -25,7 +25,11 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            // Authenticated dashboards load ~20 resources and poll alarms; login/OTP routes keep their own stricter throttles.
+            $user = $request->user('sanctum');
+            return $user
+                ? Limit::perMinute((int) env('API_RATE_LIMIT_PER_USER', 240))->by($user->id)
+                : Limit::perMinute(60)->by($request->ip());
         });
 
         $this->routes(function () {

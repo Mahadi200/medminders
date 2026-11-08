@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'patient_sms' => ['url' => env('PATIENT_SMS_URL'), 'token' => env('PATIENT_SMS_TOKEN')],
 
     /*
     |--------------------------------------------------------------------------
