@@ -69,6 +69,26 @@ class SeedDemoFixtures extends Command
                 'metadata' => ['note' => 'Fictional demo data. Verification states are fixture values, not real regulator reviews.']]);
         });
 
+        // Mark the original demo fixtures as sample data too, so `sample:purge` removes them and the site labels them.
+        $demoUsers = DB::table('users')->where('email', 'like', '%@'.self::DOMAIN)->pluck('id');
+        DB::table('users')->whereIn('id', $demoUsers)->update(['is_sample' => true]);
+        DB::table('clinician_credentials')->whereIn('user_id', $demoUsers)->update(['is_sample' => true]);
+        DB::table('patient_records')->whereIn('created_by', $demoUsers)->update(['is_sample' => true]);
+        DB::table('organizations')->where('name', 'like', 'Demo % (Fictional)')->update(['is_sample' => true]);
+
+        // Khulna sample set (is_sample = true): 4 hospitals, 12 doctors, 10 patients, 1 pharmacy, 1 admin.
+        $sample = (new \App\Support\SampleData())->run((bool) $this->option('rotate-passwords'));
+        $sampleFile = base_path('../SAMPLE_ACCOUNTS.md');
+        $md = "# MedMinders SAMPLE accounts (fictional — local only, git-ignored, do not share)\n\nGenerated ".now()->toDateTimeString()."\n\n| Account | Login | Password / method |\n|---|---|---|\n";
+        $previous = file_exists($sampleFile) ? file_get_contents($sampleFile) : '';
+        foreach ($sample as [$who, $login, $secret]) {
+            if (str_starts_with($secret, '(unchanged') && preg_match('/\| '.preg_quote($who, '/').' \| '.preg_quote($login, '/').' \| ([^|]+) \|/', $previous, $m)) $secret = trim($m[1]);
+            $md .= "| $who | $login | $secret |\n";
+        }
+        $md .= "\nStaff sign in at /doctor-login, /hospital-login or /pharmacy-login. Patients use phone + OTP at /patient-otp (the dev-only code is shown on screen when PATIENT_SMS_DEV_CHANNEL=true).\nRemove everything with `php artisan sample:purge`.\n";
+        file_put_contents($sampleFile, $md);
+        $this->info('Sample accounts written to SAMPLE_ACCOUNTS.md (repo root, git-ignored).');
+
         $path = storage_path('app/demo-credentials.local.txt');
         if ($this->credentials) {
             $lines = ["MedMinders FICTIONAL demo credentials (local only — do not commit or share). Generated ".now()->toDateTimeString(), ''];
