@@ -14,6 +14,7 @@ import { AppPreferencesProvider } from './context/AppPreferences';
 import ConnectedPortal from './pages/ConnectedPortal';
 import AmrAwareness from './pages/AmrAwareness';
 import TeamPage from './pages/TeamPage';
+import DoctorsPage, { DoctorDetailPage } from './pages/DoctorsPage';
 import MediMindersLoader from './components/home/MediMindersLoader';
 
 const router = createBrowserRouter([
@@ -38,6 +39,8 @@ const router = createBrowserRouter([
     element: <AmrAwareness/>,
   },
   { path: "/team", element: <TeamPage/> },
+  { path: "/doctors", element: <DoctorsPage/> },
+  { path: "/doctors/:id", element: <DoctorDetailPage/> },
   {
     path: "/DoctorAuth",
     element: <ConnectedPortal/>,

@@ -5,7 +5,7 @@ import PageHeader from '../components/public/PageHeader';
 const services = [
   ['Doctor workflows', FaUserMd, 'Patient records, appointments, prescription drafts, issue, amendment, and clinician cancellation.'],
   ['Patient records and consent', FaShieldAlt, 'Patients approve specific organizations, resources, actions, and time windows.'],
-  ['Pharmacy dispensing', FaPills, 'Approved pharmacies can record partial supply after consent and onboarding review. Supply does not confirm consumption.'],
+  ['Pharmacy dispensing', FaPills, 'Approved pharmacies dispense full or partial quantities once you authorize them, and you see every supply in your dashboard.'],
   ['Diagnostics and billing', FaHospital, 'Ordered tests, service billing, offline payment ledger, private reports, and release workflow.'],
   ['Prescription access', FaPrescriptionBottle, 'Authorized staff can view only the prescription resources granted to them.'],
   ['Antibiotic support', FaFileMedical, 'Patient-reported dose logging, reminders, support alerts, and educational AMR information.'],

@@ -61,3 +61,21 @@ Verified by `artisan test` (17 tests, 170 assertions), the Vite production build
 | AI summaries | Provider, consent model and clinical review |
 | Interaction checker | Licensed interaction database |
 | BMDC / DGDA / PCB verification | No public verification API; manual review only |
+
+## Update — core patient journey (Phase 2, 9 Nov 2026)
+
+**Working (tested: CorePatientJourneyTest, WebPushServiceTest, SampleDataTest, CorsTest; browser smoke of catalogue → OTP booking → assistant):**
+- Public catalogue `/doctors`, `/doctors/:id`, Home "Find a doctor" and About "Our doctors": search + filters (specialty, hospital, area, day, today), next available slot, BMDC badge, "Sample profile" badge.
+- Booking with mandatory phone OTP (5-min codes, attempt and send limits, never logged). Dev-only code shown on screen when `PATIENT_SMS_DEV_CHANNEL=true` and no SMS provider (ignored in production). Existing profile is matched by name + DOB; otherwise created.
+- Hospital: assign requested or another affiliated doctor, auto serial number, reschedule proposal, cancel with reason, check-in, no-show; full status history; automatic consultation grant (30 days after completion), visible/revocable by the patient.
+- Doctor: today's queue by serial (age, sex, masked phone, reason, needs-attention: 2 consecutive missed or open side-effect report), scoped patient view, Start consultation → prescription linked to the appointment (completes it). Dose patterns (1+0+1, 1+1+1, …), meal timing, auto quantity.
+- Dose reminders: scheduler queues jobs (database queue, retries, delivery status QUEUED/SENT/FAILED/SKIPPED), standards-based Web Push (VAPID + aes128gcm, no third-party library) with Taken / Snooze actions from the notification, SMS fallback when configured, 30-min follow-up, recorded as missed after 60 min (patient can correct). Quiet hours never silence antibiotic reminders. Installable PWA (manifest, service worker, install prompt, iOS home-screen guidance).
+- Patient: Today's doses timeline, next-dose countdown, progress ring, adherence %, streak, completed state; Access & sharing (authorize doctor/hospital/pharmacy with scopes and duration, revoke, access log).
+- Hospital and pharmacy: find patient by phone (masked until authorized), request access, then accept tests / dispense with oversupply protection. Revocation removes access immediately.
+- Assistant: 20 conditions in an editable DB table (Bangla/English synonyms), red-flag emergency message, specialty → doctors sorted by next availability → nearest hospital (browser location or area, Haversine, Google Maps link), honest fallback to Medicine. No LLM; no personal data used.
+- Sample data: `php artisan demo:seed-fictional` (or `db:seed --class=SampleDataSeeder`) — 4 Khulna hospitals, 12 doctors with generated avatars, 10 patients in different states, 1 pharmacy, 1 admin; logins in git-ignored `SAMPLE_ACCOUNTS.md`; `php artisan sample:purge` removes it all.
+
+**Not done yet (roadmap / next session):**
+- Phase 3 full "clinical futurism" redesign (shared dashboard shell, sidebar/bottom tabs, aurora background, fonts, counters, kanban, skeletons everywhere). Only the hero copy/CTAs, team photos and the assistant panel use the new direction so far.
+- Phase 4 F1–F9: admin review screens, notification preferences per type, PDFs with Bangla fonts, structured lab values, refills/stock, attachments, rule-based adherence insights module, curated interaction rules, AMR quiz, analytics dashboards, full route authorization matrix tests, accessibility/performance pass.
+- Real SMS (provider not chosen), production push needs HTTPS (works via the tunnel or Vercel origin).

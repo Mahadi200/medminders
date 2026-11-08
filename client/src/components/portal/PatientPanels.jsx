@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiImage, apiFetch, careApi } from '../../services/careApi';
 import { Badge, field, fmt, fmtDate, Msg, Section, Stat, State, TZ, useApi } from './ui';
+import { TodayDoses } from './JourneyPanels';
 
 const todayLocal = (offset = 0) => new Date(Date.now() + offset * 86400000).toLocaleDateString('en-CA', { timeZone: TZ });
 
@@ -83,6 +84,7 @@ export function CourseTracker({ token, courses, reloadKey, onChange }) {
     {!courses.length && <p className="mm-muted text-sm">No prescribed antibiotic course is linked to your profile yet.</p>}
     <div className="flex flex-wrap gap-2">{courses.map(c => <button key={c.id} onClick={() => open(c.id)} className={`rounded-lg border px-3 py-2 text-sm ${selected === c.id ? 'border-[var(--mm-primary)] ring-2 ring-[var(--mm-primary)]' : 'border-[var(--mm-border)]'}`}><strong>{c.generic_name}</strong> · {c.dose} <Badge status={c.status} /></button>)}</div>
     {detail && <div className="space-y-4">
+      <TodayDoses token={token} detail={detail} onChanged={() => { open(detail.course.id); onChange?.(); }} />
       {detail.course.status === 'AWAITING_START' && <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
         <p>Your schedule starts from the time you actually take the first dose — not the prescription or purchase time.</p>
         <button className="mm-button mm-button-primary mt-2" onClick={() => run(() => careApi(`/courses/${detail.course.id}/start`, { token, method: 'POST', body: { actual_start_at: new Date().toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ } }), 'First dose confirmed. Your dose schedule was created.')}>I took the first dose now</button>
@@ -161,7 +163,7 @@ export function PrescriptionsAndSharing({ token, prescriptions, sharing, onChang
       </article>)}
       <Msg text={msg} />
     </Section>
-    <Section id="dashboard-sharing" eyebrow="Your consent" title="Sharing and permissions">
+    <Section id="dashboard-requests" eyebrow="Requests" title="Access requests and record shares">
       <p className="text-sm">You decide who sees what, for how long. Revoking stops future access; provider-authored records and the audit history remain.</p>
       {(sharing.requests || []).filter(r => r.status === 'PENDING').map(r => <div key={r.id} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><p><strong>{r.requester_name}</strong>{r.organization_name ? ` (${r.organization_name})` : ''} asks for <strong>{r.action}</strong> access to a {r.resource_type.toLowerCase()} for {Math.round(r.duration_minutes / 60)} h.</p><p>Purpose: {r.purpose}</p><div className="mt-2 flex gap-2"><button className="mm-button mm-button-primary" onClick={() => decide(r.id, 'APPROVE')}>Approve</button><button className="mm-button mm-button-secondary" onClick={() => decide(r.id, 'DENY')}>Decline</button></div></div>)}
       {!grantGroups.length && <p className="mm-muted text-sm">No active shares.</p>}

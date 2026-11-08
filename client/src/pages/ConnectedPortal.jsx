@@ -10,6 +10,7 @@ import BackButton from '../components/navigation/BackButton';
 import DoseAlarm from '../components/portal/DoseAlarm';
 import { useApi, fmt } from '../components/portal/ui';
 import { BookAppointment, MyAppointments, CourseTracker, PrescriptionsAndSharing, RecordsArchive, ProblemReport } from '../components/portal/PatientPanels';
+import { AccessPanel, DoctorQueue, FindPatient } from '../components/portal/JourneyPanels';
 import { DoctorAffiliations, DoctorAppointments, DoctorPatients, DoctorProblems, PharmacyQueue, HospitalAffiliations, HospitalAppointments, HospitalDiagnostics } from '../components/portal/StaffPanels';
 
 export default function ConnectedPortal() {
@@ -55,6 +56,7 @@ export default function ConnectedPortal() {
   const [lab, setLab] = useState({ order_id: '', organization_id: '', price_bdt: 0, observations: '', report_id: '' });
   const [editorDirty, setEditorDirty] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [consult, setConsult] = useState(null);
   const [invoices, setInvoices] = useState([]);
 
   useEffect(() => {
@@ -134,7 +136,7 @@ export default function ConnectedPortal() {
           phone: auth.phone,
           ...(mode === 'patient-claim' ? { patient_record_id: auth.patient_record_id, claim_code: auth.claim_code } : {}),
         } });
-        setChallenge(result.challenge_id || ''); setMessage(result.message);
+        setChallenge(result.challenge_id || ''); setMessage(result.dev_code ? `DEVELOPMENT ONLY — no SMS was sent. Code: ${result.dev_code}` : result.message);
       } else if (mode === 'doctor-register') {
         await careApi('/auth/doctors/register', { method: 'POST', body: auth });
         navigate('/doctor-login'); setMessage('Doctor account created. BMDC verification is pending.');
@@ -231,15 +233,16 @@ export default function ConnectedPortal() {
           <BookAppointment token={token} recordId={records[0]?.id} onBooked={appointments.reload} />
           <MyAppointments token={token} list={appointments} />
           <PrescriptionsAndSharing token={token} prescriptions={prescriptions} sharing={sharing} onChange={load} />
+          <AccessPanel token={token} />
           <RecordsArchive token={token} prescriptions={prescriptions} reports={reports} orders={orders} invoices={invoices} />
           <ProblemReport token={token} courses={courses} />
           <MessagingPanel token={token} user={user} contacts={[...new Map(appointments.data.filter(a => !['REJECTED', 'CANCELLED'].includes(a.status)).map(a => [a.doctor_id, { label: a.doctor_name, patient_record_id: a.patient_record_id, doctor_id: a.doctor_id }])).values()]} />
         </>}
         {role === 'doctor' && <>
           {profile?.verification_status !== 'VERIFIED' && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Your BMDC registration is awaiting manual review by MedMinders. You can complete your profile now; publishing, prescribing and bookings unlock only after review. MedMinders does not query the BMDC registry automatically.</p>}
-          <DoctorAppointments token={token} list={appointments} />
+          <DoctorQueue token={token} onStart={a => { setConsult({ patient_record_id: a.patient_record_id, appointment_id: a.id, name: a.name }); setTimeout(() => document.getElementById("dashboard-prescribe")?.scrollIntoView({ behavior: "smooth" }), 50); }} />
           <DoctorPatients token={token} patients={doctorPatients} />
-          <PrescriptionEditor call={call} patients={doctorPatients.data} onDirty={setEditorDirty} onSaved={() => { setEditorDirty(false); load(); doctorPatients.reload(); }} />
+          <PrescriptionEditor call={call} patients={doctorPatients.data} preset={consult} onDirty={setEditorDirty} onSaved={() => { setEditorDirty(false); setConsult(null); load(); doctorPatients.reload(); }} />
           <DoctorProblems token={token} />
           <DoctorAffiliations token={token} />
           <div className="grid gap-5 lg:grid-cols-2"><DoctorProfilePanel profile={profile} setProfile={setProfile} save={data => act(() => call('/doctor/profile', { method: 'PATCH', body: data }))} /><DoctorPhotoPanel token={token} /></div>
@@ -251,11 +254,13 @@ export default function ConnectedPortal() {
         </>}
         {role === 'pharmacy' && <>
           <PharmacyStatusPanel status={pharmacyStatus} />
+          <FindPatient token={token} organizationId={organizationId} kind="pharmacy" />
           <PharmacyQueue token={token} />
           <InteractionCheckerPanel token={token} />
         </>}
         {role === 'hospital' && <>
           <HospitalAppointments token={token} list={appointments} />
+          <FindPatient token={token} organizationId={hospitalOrgId} kind="hospital" />
           <HospitalAffiliations token={token} />
           <HospitalDiagnostics token={token} organizationId={hospitalOrgId} />
         </>}
@@ -269,10 +274,10 @@ function DashboardNav({ role }) {
   const items = role === 'patient'
     ? [['Alarm', 'alarm'], ['Doses', 'courses'], ['Book', 'book'], ['Appointments', 'appointments'], ['Prescriptions', 'prescriptions'], ['Sharing', 'sharing'], ['Records', 'reports'], ['Support', 'problems']]
     : role === 'doctor'
-      ? [['Appointments', 'appointments'], ['Patients', 'patients'], ['Prescribe', 'prescribe'], ['Problems', 'problems'], ['Schedule', 'profile'], ['Reports', 'reports']]
+      ? [['Today', 'appointments'], ['Patients', 'patients'], ['Prescribe', 'prescribe'], ['Problems', 'problems'], ['Schedule', 'profile'], ['Reports', 'reports']]
       : role === 'pharmacy'
-        ? [['Status', 'status'], ['Dispensing', 'dispensing']]
-        : [['Appointments', 'appointments'], ['Doctors', 'status'], ['Diagnostics', 'orders']];
+        ? [['Find patient', 'find'], ['Status', 'status'], ['Dispensing', 'dispensing']]
+        : [['Appointments', 'appointments'], ['Find patient', 'find'], ['Doctors', 'status'], ['Diagnostics', 'orders']];
   return <nav aria-label="Dashboard sections" className="flex max-w-full flex-wrap gap-2 text-sm">{items.map(([label, id]) => <a key={id} href={`#dashboard-${id}`} className="mm-button mm-button-secondary">{label}</a>)}</nav>;
 }
 

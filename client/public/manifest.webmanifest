@@ -1,0 +1,14 @@
+{
+  "name": "MedMinders",
+  "short_name": "MedMinders",
+  "description": "Antibiotic dose reminders and connected care.",
+  "start_url": "/patient-login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060F1E",
+  "theme_color": "#0B1D35",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

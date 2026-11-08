@@ -237,3 +237,7 @@ See `docs/demo/FEATURE_STATUS.md` for the gap matrix, working-vs-roadmap list an
 - Network failures show "Service is temporarily offline. Please try again shortly."; details go to the browser console only. The public doctor section hides itself when empty/unavailable.
 - `start-backend.ps1` opens API, scheduler, queue worker and ngrok windows. `client/vercel.json` mirrors the SPA rewrite so deep links work whether Vercel's Root Directory is the repo root or `client/`.
 - Pending on the owner: ngrok install + authtoken + static domain; Vercel `VITE_API_URL`; Vercel build log for the failing production deploy.
+
+## Phase 2 — core patient journey (9 November 2026)
+
+See `docs/demo/FEATURE_STATUS.md` (single source of truth). Migrations (additive): `2026_11_09_000001_core_patient_journey`, `2026_11_09_000002_add_grant_scopes`, `2026_11_09_000003_seed_condition_specialties`. New: `CareJourneyController`, `AssistantController`, `PushController`, `WebPushService`, `SendDoseReminder` job, `push:vapid-keys`, `sample:purge`, `App\Support\SampleData`. Local `.env` needs `QUEUE_CONNECTION=database`, `PATIENT_SMS_DEV_CHANNEL=true` (dev only) and VAPID keys (`php artisan push:vapid-keys --write`). Verification: 25 tests / 265 assertions; Vite build; browser smoke of catalogue, OTP booking and assistant.

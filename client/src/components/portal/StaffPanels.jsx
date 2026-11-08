@@ -116,6 +116,9 @@ export function HospitalAffiliations({ token }) {
 
 export function HospitalAppointments({ token, list }) {
   const [proposal, setProposal] = useState({});
+  const [assign, setAssign] = useState({});
+  const affs = useApi('/organization/affiliations', token);
+  const doctors = affs.data.filter(a => a.status === 'CONFIRMED');
   const [msg, setMsg] = useState('');
   const set = async (id, body) => { try { await careApi(`/appointments/${id}`, { token, method: 'PATCH', body }); setMsg('Updated. The patient was notified.'); list.reload(); } catch (e) { setMsg(e.message); } };
   const pending = list.data.filter(a => a.status === 'PENDING_HOSPITAL');
@@ -125,9 +128,9 @@ export function HospitalAppointments({ token, list }) {
     <div className="grid gap-2 md:grid-cols-2">{list.data.map(a => <div key={a.id} className={`space-y-1 rounded-xl border p-3 text-sm ${a.status === 'PENDING_HOSPITAL' ? 'border-amber-300' : 'border-[var(--mm-border)]'}`}>
       <div className="flex justify-between"><strong>{a.patient_name}</strong><Badge status={a.status} /></div><p>{a.doctor_name} · {fmt(a.scheduled_at)}</p>{a.visit_reason && <p className="mm-muted">{a.visit_reason}</p>}
       {a.status === 'PROPOSED_CHANGE' && <p className="text-xs">Proposed {fmt(a.proposed_scheduled_at)} — waiting for patient.</p>}
-      {a.status === 'PENDING_HOSPITAL' && <div className="space-y-2"><div className="flex flex-wrap gap-2"><button className="mm-button mm-button-primary" onClick={() => set(a.id, { status: 'CONFIRMED' })}>Confirm</button><button className="mm-button mm-button-secondary" onClick={() => set(a.id, { status: 'REJECTED', reason: 'The hospital could not accommodate this request.' })}>Decline</button></div>
+      {a.status === 'PENDING_HOSPITAL' && <div className="space-y-2"><label className="block text-xs">Assign doctor<select className={field} value={assign[a.id] || a.doctor_id} onChange={e => setAssign({ ...assign, [a.id]: e.target.value })}>{[...new Map([[a.doctor_id, a.doctor_name + ' (requested)'], ...doctors.map(d => [d.doctor_id, d.doctor_name])]).entries()].map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></label><div className="flex flex-wrap gap-2"><button className="mm-button mm-button-primary" onClick={() => set(a.id, { status: 'CONFIRMED', assigned_doctor_id: assign[a.id] || a.doctor_id })}>Confirm & assign</button><button className="mm-button mm-button-secondary" onClick={() => set(a.id, { status: 'REJECTED', reason: 'The hospital could not accommodate this request.' })}>Decline</button></div>
         <div className="flex flex-wrap items-end gap-2"><label className="text-xs">Propose another time<input type="datetime-local" className={field} value={proposal[a.id] || ''} onChange={e => setProposal({ ...proposal, [a.id]: e.target.value })} /></label><button className="mm-button mm-button-secondary" disabled={!proposal[a.id]} onClick={() => set(a.id, { status: 'PROPOSED_CHANGE', proposed_scheduled_at: new Date(proposal[a.id]).toISOString() })}>Send to patient</button></div></div>}
-      {a.status === 'CONFIRMED' && <button className="underline" onClick={() => set(a.id, { status: 'CHECKED_IN' })}>Check in</button>}
+      {a.status === 'CONFIRMED' && <span className="flex gap-3"><span className="font-semibold">Serial #{a.serial_number}</span><button className="underline" onClick={() => set(a.id, { status: 'CHECKED_IN' })}>Check in</button><button className="underline" onClick={() => set(a.id, { status: 'NO_SHOW' })}>No-show</button><button className="text-red-700 underline" onClick={() => { const reason = window.prompt('Reason for cancelling (sent to the patient):'); if (reason) set(a.id, { status: 'CANCELLED', reason }); }}>Cancel</button></span>}
     </div>)}</div>
     <Msg text={msg} />
   </Section>;

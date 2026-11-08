@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { careApi } from '../../services/careApi';
 import { fmt, Msg } from './ui';
+import PushSetup from './PushSetup';
 
 const POLL_MS = 30000;
 const RING_LIMIT_MS = 60000; // limited follow-up: sound stops after one minute; the banner remains
@@ -109,12 +110,13 @@ export default function DoseAlarm({ token, isBangla, onLogged }) {
         <div><p className="mm-eyebrow">{t('Dose alarm', 'ডোজ অ্যালার্ম')}</p><h2 className="text-lg font-bold">{t('Alarms while MedMinders is open', 'MedMinders খোলা থাকাকালীন অ্যালার্ম')}</h2></div>
         <div className="text-right text-sm"><p className="mm-muted">{t('Next scheduled dose', 'পরবর্তী নির্ধারিত ডোজ')}</p><p className="font-semibold">{next ? `${next.generic_name} · ${fmt(next.scheduled_at)}` : t('None scheduled', 'কোনো ডোজ নির্ধারিত নেই')}</p></div>
       </div>
-      <p className="text-sm">{t('Alarms are checked every 30 seconds in this tab. Snoozing or acknowledging never changes your prescribed time. An unanswered alarm stays “unconfirmed” — it is not recorded as a missed dose. SMS and phone push alarms are not connected yet.', 'এই ট্যাবে প্রতি ৩০ সেকেন্ডে অ্যালার্ম দেখা হয়। স্নুজ বা স্বীকার করলে প্রেসক্রিপশনের সময় বদলায় না। উত্তর না দিলে ডোজটি “অনিশ্চিত” থাকে — মিসড ডোজ হিসেবে লেখা হয় না। SMS ও ফোন পুশ অ্যালার্ম এখনো যুক্ত হয়নি।')}</p>
+      <p className="text-sm">{t('While MedMinders is open, the alarm rings here. Turn on phone reminders below to be alerted even when the app is closed. Snoozing never changes your prescribed time. If a dose is not confirmed within an hour, it is recorded as missed — you can still correct it.', 'MedMinders খোলা থাকলে এখানে অ্যালার্ম বাজবে। অ্যাপ বন্ধ থাকলেও সতর্কতা পেতে নিচে ফোন রিমাইন্ডার চালু করুন। স্নুজ করলে প্রেসক্রিপশনের সময় বদলায় না। এক ঘণ্টার মধ্যে নিশ্চিত না করলে ডোজটি মিসড হিসেবে লেখা হয় — পরে সংশোধন করা যায়।')}</p>
       <div className="flex flex-wrap gap-2">
         <button className="mm-button mm-button-primary" onClick={enableSound} disabled={soundOn}>{soundOn ? t('🔔 Alarm sound on', '🔔 শব্দ চালু') : t('Enable alarm sound', 'অ্যালার্মের শব্দ চালু করুন')}</button>
         <button className="mm-button mm-button-secondary" onClick={askNotifications} disabled={permission !== 'default'}>{permission === 'granted' ? t('Browser notifications on', 'ব্রাউজার নোটিফিকেশন চালু') : permission === 'denied' ? t('Notifications blocked in browser', 'ব্রাউজারে নোটিফিকেশন বন্ধ') : permission === 'unsupported' ? t('Notifications unsupported', 'নোটিফিকেশন সমর্থিত নয়') : t('Allow browser notifications (optional)', 'ব্রাউজার নোটিফিকেশন (ঐচ্ছিক)')}</button>
         <button className="mm-button mm-button-secondary" onClick={testAlarm}>{t('Test alarm (demo, this device only)', 'টেস্ট অ্যালার্ম (ডেমো, শুধু এই ডিভাইস)')}</button>
       </div>
+      <PushSetup token={token} t={t} />
       {due.length > 0 && <ul className="space-y-1 text-sm">{due.map(d => <li key={d.dose_event_id} className="flex flex-wrap items-center gap-2"><strong>{d.generic_name}</strong> {d.dose} · {t('due', 'সময়')} {fmt(d.scheduled_at)} · {d.acknowledged_at ? t('acknowledged, still unconfirmed', 'স্বীকৃত, এখনো অনিশ্চিত') : d.ringing ? t('ringing', 'বাজছে') : t(`snoozed until ${fmt(d.snoozed_until)}`, `স্নুজ ${fmt(d.snoozed_until)} পর্যন্ত`)} <button className="underline" onClick={() => setModal(d)}>{t('Record', 'লিখুন')}</button></li>)}</ul>}
       <Msg text={message} />
     </section>

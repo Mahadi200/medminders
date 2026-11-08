@@ -11,6 +11,7 @@
 | Team | Deck slide 7 | Team page and homepage preview | Separate verified portraits and title confirmation | Implemented from supplied text, titles flagged | `/team` browser render |
 | Recognition/appreciation claims | Deck slide 8 | None published | Evidence review | Intentionally omitted | No endorsement or institutional claim in UI |
 | Central notifications | Earlier notification requirement | `care_notifications`, preferences, scheduler | Full event producers, queue retries, external channels | Partial | Expanded lifecycle schema, read/ack APIs, tests |
+| Core patient journey (catalogue → OTP booking → assignment → prescription → push reminders → authorized hospital/pharmacy → revoke) | Phase 2 | CareJourneyController, PushController, AssistantController, SampleData | Phase 3 redesign, Phase 4 features | Implemented | CorePatientJourneyTest; browser smoke |
 | Medication scheduling | Earlier clinical requirement | Courses, explicit schedules, dose logs, treatment stop | Full timezone edge-case review | Partial | Existing dose/amendment tests |
 | Patient–doctor messaging | Current request | New conversations/messages APIs and dashboard panel | Attachments, pagination UX, abuse controls | Implemented foundation | Participant-isolation test |
 | Medication problem reports | Current request | New structured report table/API and support notification | Private attachment upload and clinician triage UI | Implemented foundation | API authorization path; full fixture pending |
