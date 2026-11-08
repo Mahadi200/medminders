@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FaBars, FaGlobe, FaMoon, FaSun, FaTimes, FaUserInjured, FaUserMd, FaHospital, FaPills } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppPreferences } from '../../context/AppPreferences';
-import logo from '../../Polished MedMinders Healthcare Logo.png';
+import logo from '../../assets/brand/medminders-logo.png';
 
 const navItems = [['Home', '/'], ['About', '/about'], ['Services', '/service'], ['Information', '/amr-awareness'], ['Team', '/team'], ['Contact', '/contact']];
 const roleItems = [['Patient', '/patient-login', FaUserInjured], ['Doctor', '/doctor-login', FaUserMd], ['Pharmacy', '/pharmacy-login', FaPills], ['Hospital', '/hospital-login', FaHospital]];

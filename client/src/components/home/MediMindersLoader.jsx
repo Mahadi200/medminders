@@ -1,5 +1,5 @@
 import { FaHeartbeat, FaShieldAlt } from 'react-icons/fa';
-import logo from '../../Polished MedMinders Healthcare Logo.png';
+import logo from '../../assets/brand/medminders-logo.png';
 
 const MediMindersLoader = () => (
   <div className="mm-loader fixed inset-0 z-[9999] flex items-center justify-center p-4">

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { FaEnvelope } from 'react-icons/fa';
-import logo from '../../Polished MedMinders Healthcare Logo.png';
+import logo from '../../assets/brand/medminders-logo.png';
 
 const groups = [
   ['Explore', [['Home', '/'], ['About', '/about'], ['Services', '/service'], ['Information', '/amr-awareness'], ['Team', '/team'], ['Contact', '/contact']]],
