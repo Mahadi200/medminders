@@ -49,7 +49,17 @@ class AppointmentController extends Controller
         return response()->json(['timezone' => self::TZ, 'slots' => $this->slotList($aff, $data['date'])]);
     }
 
-    private function slotList(object $aff, string $date): array
+    /** Next open slot within 14 days (for catalogue cards and assistant sorting). */
+    public function nextAvailable(object $aff): ?array
+    {
+        for ($d = 0; $d < 14; $d++) {
+            $date = now(self::TZ)->addDays($d)->format('Y-m-d');
+            foreach ($this->slotList($aff, $date) as $slot) if ($slot['available']) return $slot + ['date' => $date];
+        }
+        return null;
+    }
+
+    public function slotList(object $aff, string $date): array
     {
         $day = CarbonImmutable::parse($date, self::TZ);
         $days = json_decode($aff->visiting_days, true) ?: [];
@@ -113,6 +123,12 @@ class AppointmentController extends Controller
             'scheduled_at' => 'required|date|after:now', 'visit_reason' => 'nullable|string|max:500', 'consultation_consent' => 'boolean',
         ]);
         abort_unless(SharingController::owns($user->id, $data['patient_record_id']), 403);
+        return $this->createRequest($user, $data);
+    }
+
+    /** Shared by logged-in booking and the public OTP booking flow. */
+    public function createRequest(User $user, array $data)
+    {
         $aff = DB::table('doctor_affiliations')->where('id', $data['affiliation_id'])->where('status', 'CONFIRMED')->first();
         abort_unless($aff, 422, 'This doctor does not have a confirmed schedule at that hospital.');
         abort_unless(DB::table('clinician_credentials')->where('user_id', $aff->doctor_id)->where('verification_status', 'VERIFIED')->where('is_published', true)->exists(), 422);
@@ -133,6 +149,11 @@ class AppointmentController extends Controller
                 'scheduled_at' => $at->toDateTimeString(), 'status' => 'PENDING_HOSPITAL', 'visit_reason' => $data['visit_reason'] ?? null,
                 'consultation_consent' => (bool) ($data['consultation_consent'] ?? false), 'created_at' => now(), 'updated_at' => now()]);
             AuditEvent::create(['actor_user_id' => $user->id, 'action' => 'APPOINTMENT_REQUESTED', 'entity_type' => 'appointment', 'entity_id' => $id]);
+            self::history($id, null, 'PENDING_HOSPITAL', $user->id, 'Requested by patient');
+            foreach ($this->patientUsers($data['patient_record_id']) as $patientUser) {
+                $this->notifications->create($patientUser, 'APPOINTMENT_REQUESTED', 'INFORMATION', 'NORMAL', 'APPOINTMENT', $id, '/patient-login#dashboard-appointments',
+                    ['message' => 'Booking received. Waiting for hospital confirmation.'], 'APPOINTMENT_REQUESTED_PATIENT:'.$id);
+            }
             foreach ($this->hospitalDesk($aff->organization_id) as $staffId) {
                 $this->notifications->create($staffId, 'APPOINTMENT_REQUESTED', 'ACTION_REQUIRED', 'NORMAL', 'APPOINTMENT', $id, '/hospital-login#dashboard-appointments',
                     ['message' => 'New appointment request for '.$at->setTimezone(self::TZ)->format('d M Y, h:i A').'.']);
@@ -154,8 +175,9 @@ class AppointmentController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $data = $request->validate(['status' => 'required|in:CONFIRMED,REJECTED,PROPOSED_CHANGE,CHECKED_IN,IN_PROGRESS,COMPLETED,CANCELLED',
-            'reason' => 'nullable|string|max:500', 'proposed_scheduled_at' => 'required_if:status,PROPOSED_CHANGE|nullable|date|after:now']);
+        $data = $request->validate(['status' => 'required|in:CONFIRMED,REJECTED,PROPOSED_CHANGE,CHECKED_IN,IN_PROGRESS,COMPLETED,CANCELLED,NO_SHOW',
+            'reason' => 'nullable|string|max:500', 'proposed_scheduled_at' => 'required_if:status,PROPOSED_CHANGE|nullable|date|after:now',
+            'assigned_doctor_id' => 'nullable|ulid|exists:users,id', 'serial_number' => 'nullable|integer|min:1|max:999']);
         $appointment = DB::table('appointments')->find($id);
         abort_unless($appointment, 404);
         $user = $request->user();
@@ -166,16 +188,26 @@ class AppointmentController extends Controller
         $patient = SharingController::owns($user->id, $appointment->patient_record_id);
         $allowed = ($doctor && in_array($data['status'], ['CHECKED_IN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']) && $appointment->status !== 'PENDING_HOSPITAL')
             || ($assistant && in_array($data['status'], ['CHECKED_IN', 'CANCELLED']))
-            || ($hospital && in_array($data['status'], ['CONFIRMED', 'REJECTED', 'PROPOSED_CHANGE', 'CANCELLED', 'CHECKED_IN']))
+            || ($hospital && in_array($data['status'], ['CONFIRMED', 'REJECTED', 'PROPOSED_CHANGE', 'CANCELLED', 'CHECKED_IN', 'NO_SHOW']))
             || ($patient && $data['status'] === 'CANCELLED');
         abort_unless($allowed, 403);
-        abort_if(in_array($appointment->status, ['COMPLETED', 'CANCELLED', 'REJECTED']), 422, 'This appointment is already closed.');
+        abort_if($hospital && in_array($data['status'], ['CANCELLED', 'REJECTED'], true) && empty($data['reason']), 422, 'Give a reason for the patient.');
+        abort_if(in_array($appointment->status, ['COMPLETED', 'CANCELLED', 'REJECTED', 'NO_SHOW']), 422, 'This appointment is already closed.');
         $update = ['status' => $data['status'], 'status_reason' => $data['reason'] ?? null, 'updated_at' => now()];
         if ($data['status'] === 'CONFIRMED') {
             abort_unless(in_array($appointment->status, ['PENDING_HOSPITAL', 'BOOKED']), 422, 'Only pending requests can be confirmed.');
-            $minutes = $appointment->affiliation_id ? (int) DB::table('doctor_affiliations')->where('id', $appointment->affiliation_id)->value('slot_minutes') : 15;
-            abort_if($this->doctorBusyConfirmed($appointment->doctor_id, CarbonImmutable::parse($appointment->scheduled_at, 'UTC'), $minutes, $id), 422, 'The requested slot is no longer available.');
+            // The hospital may assign the requested doctor or another doctor with a confirmed affiliation at this hospital.
+            $doctorId = $data['assigned_doctor_id'] ?? $appointment->doctor_id;
+            $aff = DB::table('doctor_affiliations')->where('doctor_id', $doctorId)->where('organization_id', $appointment->organization_id)->where('status', 'CONFIRMED')->first();
+            abort_unless($aff || $doctorId === $appointment->doctor_id, 422, 'That doctor has no confirmed schedule at this hospital.');
+            $minutes = $aff->slot_minutes ?? 15;
+            abort_if($this->doctorBusyConfirmed($doctorId, CarbonImmutable::parse($appointment->scheduled_at, 'UTC'), $minutes, $id), 422, 'The requested slot is no longer available for that doctor.');
+            $localDate = CarbonImmutable::parse($appointment->scheduled_at, 'UTC')->setTimezone(self::TZ);
+            $serial = $data['serial_number'] ?? ((int) DB::table('appointments')->where('doctor_id', $doctorId)->where('id', '!=', $id)
+                ->whereBetween('scheduled_at', [$localDate->startOfDay()->utc()->toDateTimeString(), $localDate->endOfDay()->utc()->toDateTimeString()])->max('serial_number') + 1);
+            $update += ['doctor_id' => $doctorId, 'affiliation_id' => $aff->id ?? $appointment->affiliation_id, 'serial_number' => $serial, 'assigned_by' => $user->id];
         }
+        if ($data['status'] === 'COMPLETED') $update['completed_at'] = now();
         if ($data['status'] === 'PROPOSED_CHANGE') {
             abort_unless($appointment->status === 'PENDING_HOSPITAL', 422);
             $proposed = CarbonImmutable::parse($data['proposed_scheduled_at'])->utc();
@@ -187,7 +219,9 @@ class AppointmentController extends Controller
             DB::table('appointments')->where('id', $id)->update($update);
             AuditEvent::create(['actor_user_id' => $user->id, 'action' => 'APPOINTMENT_STATUS_CHANGED', 'entity_type' => 'appointment', 'entity_id' => $id,
                 'metadata' => ['from' => $appointment->status, 'status' => $data['status']]]);
-            if ($data['status'] === 'CONFIRMED') $this->afterConfirm($appointment, $user->id);
+            self::history($id, $appointment->status, $data['status'], $user->id, $data['reason'] ?? null);
+            if ($data['status'] === 'CONFIRMED') $this->afterConfirm(DB::table('appointments')->find($id), $user->id);
+            if ($data['status'] === 'COMPLETED') self::extendConsultationGrant($id);
             $when = CarbonImmutable::parse($appointment->scheduled_at, 'UTC')->setTimezone(self::TZ)->format('d M Y, h:i A');
             $messages = ['CONFIRMED' => "Your appointment on $when was confirmed by the hospital.", 'REJECTED' => "Your appointment request for $when was declined.",
                 'PROPOSED_CHANGE' => 'The hospital proposed a different time. Accept or decline it in your dashboard.', 'CANCELLED' => "The appointment on $when was cancelled."];
@@ -213,19 +247,43 @@ class AppointmentController extends Controller
         $when = CarbonImmutable::parse($appointment->scheduled_at, 'UTC');
         $this->notifications->create($appointment->doctor_id, 'APPOINTMENT_CONFIRMED', 'INFORMATION', 'NORMAL', 'APPOINTMENT', $appointment->id, '/doctor-login#dashboard-appointments',
             ['message' => 'Confirmed appointment on '.$when->setTimezone(self::TZ)->format('d M Y, h:i A').'.'], 'APPOINTMENT_CONFIRMED_DOCTOR:'.$appointment->id);
-        if (! $appointment->consultation_consent) return;
-        $exists = SharingController::granted($appointment->doctor_id, $appointment->patient_record_id, 'ENCOUNTER', $appointment->patient_record_id, 'REVIEW');
+        // Assignment creates an expiring consultation grant (doctor → this patient), linked to the appointment and revocable by the patient.
+        $exists = DB::table('sharing_grants')->where('appointment_id', $appointment->id)->where('recipient_id', $appointment->doctor_id)->whereNull('revoked_at')->exists();
         if ($exists) return;
         $requestId = (string) Str::ulid();
-        $expires = $when->addDays(7)->max(now()->addDays(1));
+        $expires = $when->addDays(30)->max(now()->addDays(1));
         DB::table('sharing_requests')->insert(['id' => $requestId, 'patient_record_id' => $appointment->patient_record_id, 'requester_id' => $appointment->created_by,
             'organization_id' => $appointment->organization_id, 'resource_type' => 'ENCOUNTER', 'resource_id' => $appointment->patient_record_id, 'action' => 'REVIEW',
-            'purpose' => 'Consultation consent given at booking', 'duration_minutes' => (int) now()->diffInMinutes($expires), 'status' => 'APPROVED',
+            'purpose' => 'Consultation access from hospital assignment', 'duration_minutes' => (int) now()->diffInMinutes($expires), 'status' => 'APPROVED',
             'expires_at' => $expires, 'created_at' => now(), 'updated_at' => now()]);
         DB::table('sharing_grants')->insert(['id' => (string) Str::ulid(), 'sharing_request_id' => $requestId, 'patient_record_id' => $appointment->patient_record_id,
             'recipient_id' => $appointment->doctor_id, 'organization_id' => $appointment->organization_id, 'resource_type' => 'ENCOUNTER',
-            'resource_id' => $appointment->patient_record_id, 'action' => 'REVIEW', 'expires_at' => $expires, 'created_at' => now(), 'updated_at' => now()]);
-        AuditEvent::create(['actor_user_id' => $actorId, 'action' => 'CONSULTATION_GRANT_FROM_BOOKING_CONSENT', 'entity_type' => 'appointment', 'entity_id' => $appointment->id]);
+            'resource_id' => $appointment->patient_record_id, 'action' => 'REVIEW', 'expires_at' => $expires, 'created_at' => now(), 'updated_at' => now(),
+            'scopes' => json_encode(['PROFILE', 'PRESCRIPTIONS', 'REPORTS', 'HISTORY']), 'created_via' => 'ASSIGNMENT', 'appointment_id' => $appointment->id]);
+        AuditEvent::create(['actor_user_id' => $actorId, 'action' => 'CONSULTATION_GRANT_FROM_ASSIGNMENT', 'entity_type' => 'appointment', 'entity_id' => $appointment->id]);
+    }
+
+    public static function history(string $appointmentId, ?string $from, string $to, ?string $actorId, ?string $note = null): void
+    {
+        DB::table('appointment_status_history')->insert(['id' => (string) Str::ulid(), 'appointment_id' => $appointmentId, 'from_status' => $from,
+            'to_status' => $to, 'actor_id' => $actorId, 'note' => $note, 'created_at' => now()]);
+    }
+
+    /** Consultation access lasts 30 days after the appointment is completed. */
+    public static function extendConsultationGrant(string $appointmentId): void
+    {
+        DB::table('sharing_grants')->where('appointment_id', $appointmentId)->whereNull('revoked_at')->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+    }
+
+    public function historyFor(Request $request, string $id)
+    {
+        $a = DB::table('appointments')->find($id);
+        abort_unless($a, 404);
+        $u = $request->user();
+        $ok = SharingController::owns($u->id, $a->patient_record_id) || $a->doctor_id === $u->id
+            || DB::table('organization_memberships')->where('user_id', $u->id)->where('organization_id', $a->organization_id)->where('is_active', true)->exists();
+        abort_unless($ok, 404);
+        return DB::table('appointment_status_history')->where('appointment_id', $id)->orderBy('created_at')->get();
     }
 
     /** Patient accepts or declines a hospital-proposed time. Nothing changes without acceptance. */

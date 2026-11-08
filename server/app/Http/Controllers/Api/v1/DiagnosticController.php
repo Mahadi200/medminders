@@ -59,7 +59,8 @@ class DiagnosticController extends Controller
             abort_unless($rx->status === 'SIGNED', 422);
             $grant = DB::table('sharing_grants')->where('recipient_id', $request->user()->id)->where('organization_id', $data['organization_id'])
                 ->where('patient_record_id', $order->patient_record_id)->where('resource_type', 'PRESCRIPTION')
-                ->where('resource_id', $rx->id)->where('action', 'VIEW')->whereNull('revoked_at')->where('expires_at', '>', now())->exists();
+                ->where('resource_id', $rx->id)->where('action', 'VIEW')->whereNull('revoked_at')->where('expires_at', '>', now())->exists()
+                || CareJourneyController::orgAuthorized($request->user()->id, $order->patient_record_id, $data['organization_id']);
             abort_unless($grant, 403);
             DB::table('test_orders')->where('id', $orderId)->update(['status' => 'ACCEPTED', 'performing_organization_id' => $data['organization_id'], 'updated_at' => now()]);
             AuditEvent::create(['actor_user_id' => $request->user()->id, 'action' => 'TEST_ORDER_ACCEPTED', 'entity_type' => 'test_order', 'entity_id' => $orderId]);

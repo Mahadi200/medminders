@@ -24,6 +24,9 @@ use App\Http\Controllers\Api\v1\InteractionController;
 use App\Http\Controllers\Api\v1\AffiliationController;
 use App\Http\Controllers\Api\v1\AlarmController;
 use App\Http\Controllers\Api\v1\CareTeamController;
+use App\Http\Controllers\Api\v1\CareJourneyController;
+use App\Http\Controllers\Api\v1\AssistantController;
+use App\Http\Controllers\Api\v1\PushController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -56,8 +59,16 @@ Route::prefix('v1')->group(function () {
     Route::get('/doctors', [DoctorController::class, 'index']);
     Route::get('/doctors/{id}', [DoctorController::class, 'show']);
     Route::get('/doctors/{id}/photo', [DoctorController::class, 'photo']);
-    Route::get('/affiliations/{id}/slots', [AppointmentController::class, 'slots'])->middleware('throttle:60,1');
+    Route::get('/affiliations/{id}/slots', [AppointmentController::class, 'slots'])->middleware('throttle:60,1,slots');
     Route::get('/organizations/approved', [SharingController::class, 'organizations']);
+    Route::get('/public/doctors', [CareJourneyController::class, 'catalogue'])->middleware('throttle:60,1,catalogue');
+    Route::post('/public/otp', [CareJourneyController::class, 'sendOtp'])->middleware('throttle:5,10,otp-send');
+    Route::post('/public/otp/verify', [CareJourneyController::class, 'verifyOtp'])->middleware('throttle:10,10,otp-verify');
+    Route::post('/public/bookings', [CareJourneyController::class, 'book'])->middleware('throttle:10,10,booking');
+    Route::get('/assistant/conditions', [AssistantController::class, 'conditions']);
+    Route::post('/assistant/ask', [AssistantController::class, 'ask'])->middleware('throttle:20,1,assistant');
+    Route::get('/push/public-key', [PushController::class, 'publicKey']);
+    Route::post('/push/action', [PushController::class, 'action'])->middleware('throttle:30,1,push-action');
 
     Route::middleware(['auth:sanctum', 'mfa.ready'])->group(function () {
         Route::get('/doctor/profile', [DoctorController::class, 'me']);
@@ -81,6 +92,17 @@ Route::prefix('v1')->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
         Route::patch('/appointments/{id}', [AppointmentController::class, 'update']);
         Route::post('/appointments/{id}/respond', [AppointmentController::class, 'respond']);
+        Route::get('/appointments/{id}/history', [AppointmentController::class, 'historyFor']);
+        Route::get('/organization/patients/search', [CareJourneyController::class, 'findByPhone'])->middleware('throttle:30,1,phone-search');
+        Route::post('/organization/patients/{recordId}/request-access', [CareJourneyController::class, 'requestAccess']);
+        Route::post('/access/authorize', [CareJourneyController::class, 'authorizeAccess']);
+        Route::get('/access/overview', [CareJourneyController::class, 'accessOverview']);
+        Route::get('/doctor/queue', [CareJourneyController::class, 'doctorQueue']);
+        Route::get('/doctor/patients/{recordId}', [CareJourneyController::class, 'doctorPatient']);
+        Route::post('/push/subscriptions', [PushController::class, 'subscribe']);
+        Route::post('/push/unsubscribe', [PushController::class, 'unsubscribe']);
+        Route::get('/push/status', [PushController::class, 'status']);
+        Route::post('/push/test', [PushController::class, 'test'])->middleware('throttle:5,1,push-test');
         Route::get('/doctor/affiliations', [AffiliationController::class, 'mine']);
         Route::post('/doctor/affiliations', [AffiliationController::class, 'upsert']);
         Route::get('/organization/affiliations', [AffiliationController::class, 'forOrganization']);

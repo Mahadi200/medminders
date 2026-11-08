@@ -85,7 +85,11 @@ class SharingController extends Controller
             abort_unless($share && self::owns($request->user()->id, $share->patient_record_id), 404);
             abort_unless($share->status === 'PENDING' && now()->lessThan($share->expires_at), 422);
             DB::table('sharing_requests')->where('id', $id)->update(['status' => $data['decision'] === 'APPROVE' ? 'APPROVED' : 'DENIED', 'updated_at' => now()]);
-            if ($data['decision'] === 'APPROVE') DB::table('sharing_grants')->insert([
+            if ($data['decision'] === 'APPROVE' && $share->resource_type === 'PATIENT_RECORD') {
+                $org = DB::table('organizations')->where('id', $share->organization_id)->first(['id', 'type', 'name']);
+                CareJourneyController::grantOrganization($share->patient_record_id, $org, $request->user()->id, CareJourneyController::SCOPES,
+                    \Carbon\CarbonImmutable::now()->addMinutes($share->duration_minutes), 'PATIENT_APPROVAL', $id);
+            } elseif ($data['decision'] === 'APPROVE') DB::table('sharing_grants')->insert([
                 'id' => (string) Str::ulid(), 'sharing_request_id' => $id, 'patient_record_id' => $share->patient_record_id,
                 'recipient_id' => $share->requester_id, 'organization_id' => $share->organization_id,
                 'resource_type' => $share->resource_type, 'resource_id' => $share->resource_id, 'action' => $share->action,

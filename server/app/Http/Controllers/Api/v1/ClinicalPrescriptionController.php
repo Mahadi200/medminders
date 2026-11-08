@@ -53,7 +53,7 @@ class ClinicalPrescriptionController extends Controller
             'items.*.schedule_details' => 'required|array', 'items.*.duration_days' => 'nullable|integer|min:1|max:365',
             'items.*.review_date' => 'nullable|date', 'items.*.quantity' => 'nullable|integer|min:1',
             'items.*.instructions' => 'nullable|string|max:3000', 'items.*.is_antibiotic' => 'required|boolean',
-            'items.*.indication' => 'nullable|string|max:1000',
+            'items.*.indication' => 'nullable|string|max:1000', 'appointment_id' => 'nullable|ulid',
         ]);
         $patient = DB::table('patient_records')->find($data['patient_record_id']);
         if (! count($data['items']) && ! count($data['tests'])) throw ValidationException::withMessages(['items' => 'Add a medicine or investigation.']);
@@ -98,6 +98,15 @@ class ClinicalPrescriptionController extends Controller
                 'test_name' => $test, 'status' => 'ORDERED', 'created_at' => now(), 'updated_at' => now(),
             ]);
             AuditEvent::create(['actor_user_id' => $doctor->id, 'action' => 'PRESCRIPTION_ISSUED', 'entity_type' => 'prescription', 'entity_id' => $prescription->id]);
+            if (! empty($data['appointment_id'])) {
+                $appt = DB::table('appointments')->where('id', $data['appointment_id'])->where('doctor_id', $doctor->id)->where('patient_record_id', $patient->id)
+                    ->whereIn('status', ['CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS'])->first();
+                if ($appt) {
+                    DB::table('appointments')->where('id', $appt->id)->update(['status' => 'COMPLETED', 'completed_at' => now(), 'updated_at' => now()]);
+                    AppointmentController::history($appt->id, $appt->status, 'COMPLETED', $doctor->id, 'Prescription issued');
+                    AppointmentController::extendConsultationGrant($appt->id);
+                }
+            }
             foreach (DB::table('patient_links')->where('patient_record_id', $patient->id)->pluck('user_id') as $patientUser) {
                 app(\App\Services\CareNotificationService::class)->create($patientUser, 'PRESCRIPTION_ISSUED', 'INFORMATION', 'NORMAL', 'PRESCRIPTION', $prescription->id, '/patient-login#dashboard-prescriptions', ['message' => 'Dr. '.$doctor->name.' issued a new prescription. Confirm your first antibiotic dose when you actually take it.']);
             }

@@ -118,7 +118,7 @@ class ConnectedCareTest extends TestCase
         $invitation = $created->json('claim_code');
         $code = null;
         $sms = \Mockery::mock(PatientSmsGateway::class);
-        $sms->shouldReceive('send')->once()->andReturnUsing(function ($phone, $sentCode) use (&$code) { $code = $sentCode; });
+        $sms->shouldReceive('deliverCode')->once()->andReturnUsing(function ($phone, $sentCode) use (&$code) { $code = $sentCode; return null; });
         $this->app->instance(PatientSmsGateway::class, $sms);
         $this->postJson('/api/v1/patients/challenge', ['phone' => '01712345678', 'patient_record_id' => $id, 'claim_code' => 'wrong'])
             ->assertOk();
@@ -208,7 +208,9 @@ class ConnectedCareTest extends TestCase
         DB::table('dose_events')->where('id', $unconfirmedId)->update(['scheduled_at' => now()->subHours(3)]);
         $this->artisan('care:prepare-dose-notifications')->assertExitCode(0);
         $this->artisan('care:prepare-dose-notifications')->assertExitCode(0);
-        $this->assertSame(2, DB::table('care_notifications')->where('user_id', $patient->id)->where('dose_event_id', $unconfirmedId)->count());
+        // A dose with no confirmation 60+ minutes after its time is recorded as MISSED once (idempotent), with one notification.
+        $this->assertSame('MISSED', DB::table('dose_events')->where('id', $unconfirmedId)->value('status'));
+        $this->assertSame(1, DB::table('care_notifications')->where('user_id', $patient->id)->where('dose_event_id', $unconfirmedId)->where('event_type', 'DOSE_MISSED')->count());
         Sanctum::actingAs($doctor);
         $this->postJson('/api/v1/clinical-prescriptions/'.$rx->id.'/cancel', ['reason' => 'Fictional clinician stop'])->assertOk();
         $this->assertSame('STOPPED_BY_CLINICIAN', DB::table('medication_courses')->where('id', $courseId)->value('status'));

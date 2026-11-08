@@ -45,12 +45,12 @@ class PatientAccessController extends Controller
             'patient_record_id' => $data['patient_record_id'] ?? null, 'pending_name' => $data['name'] ?? null,
             'code_hash' => Hash::make($code), 'expires_at' => now()->addMinutes(5), 'created_at' => now(), 'updated_at' => now(),
         ]);
-        try { $sms->send($phone, $code); }
+        try { $devCode = $sms->deliverCode($phone, $code); }
         catch (\Throwable $e) {
             DB::table('phone_challenges')->where('id', $id)->delete();
             return response()->json(['message' => 'SMS delivery is unavailable.'], 503);
         }
-        return response()->json(['message' => 'If eligible, a code has been sent.', 'challenge_id' => $id]);
+        return response()->json(['message' => 'If eligible, a code has been sent.', 'challenge_id' => $id] + ($devCode ? ['dev_code' => $devCode, 'dev_notice' => 'DEVELOPMENT ONLY — no SMS was sent.'] : []));
     }
 
     public function verify(Request $request)

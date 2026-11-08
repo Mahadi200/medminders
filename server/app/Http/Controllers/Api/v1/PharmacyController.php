@@ -37,7 +37,8 @@ class PharmacyController extends Controller
             abort_unless($rx->status === 'SIGNED' && ! $rx->superseded_at && ! $rx->cancelled_at, 422);
             $grant = DB::table('sharing_grants')->where('recipient_id', $user->id)->where('patient_record_id', $rx->patient_record_id)
                 ->where('organization_id', $data['organization_id'])->where('resource_type', 'PRESCRIPTION')->where('resource_id', $rx->id)
-                ->where('action', 'DISPENSE')->whereNull('revoked_at')->where('expires_at', '>', now())->exists();
+                ->where('action', 'DISPENSE')->whereNull('revoked_at')->where('expires_at', '>', now())->exists()
+                || CareJourneyController::orgAuthorized($user->id, $rx->patient_record_id, $data['organization_id']);
             abort_unless($grant, 403);
             $existing = DB::table('dispensings')->where('idempotency_key', $data['idempotency_key'])->first();
             if ($existing) {

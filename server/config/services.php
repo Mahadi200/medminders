@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'patient_sms' => ['url' => env('PATIENT_SMS_URL'), 'token' => env('PATIENT_SMS_TOKEN')],
+    'patient_sms' => ['url' => env('PATIENT_SMS_URL'), 'token' => env('PATIENT_SMS_TOKEN'), 'dev_channel' => env('PATIENT_SMS_DEV_CHANNEL', false)],
+    'webpush' => ['public_key' => env('VAPID_PUBLIC_KEY'), 'private_key' => env('VAPID_PRIVATE_KEY'), 'subject' => env('VAPID_SUBJECT', 'mailto:support@medminders.example'), 'openssl_conf' => env('OPENSSL_CONF_PATH', 'C:/xampp/php/extras/ssl/openssl.cnf')],
+    'llm' => ['provider' => env('ASSISTANT_LLM_PROVIDER')],
 
     /*
     |--------------------------------------------------------------------------
