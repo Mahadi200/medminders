@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { careApi, API_ORIGIN } from '../../services/careApi';
+import { ApiImage, apiFetch, careApi } from '../../services/careApi';
 import { Badge, field, fmt, fmtDate, Msg, Section, Stat, State, TZ, useApi } from './ui';
 
 const todayLocal = (offset = 0) => new Date(Date.now() + offset * 86400000).toLocaleDateString('en-CA', { timeZone: TZ });
@@ -31,7 +31,7 @@ export function BookAppointment({ token, recordId, onBooked }) {
     {doctors.data.length > 0 && <form onSubmit={submit} className="space-y-3">
       <div className="grid gap-3 md:grid-cols-2">
         {doctors.data.map(d => <button type="button" key={d.id} onClick={() => { setDoctorId(d.id); setAffId(d.affiliations?.[0]?.id || ''); }} className={`flex gap-3 rounded-xl border p-3 text-left ${doctorId === d.id ? 'border-[var(--mm-primary)] ring-2 ring-[var(--mm-primary)]' : 'border-[var(--mm-border)]'}`}>
-          {d.has_photo ? <img src={`${API_ORIGIN}/api/v1/doctors/${d.id}/photo`} alt="" className="h-14 w-14 rounded-full object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-100 text-xl font-bold text-teal-900">{d.user?.name?.replace('Dr. ', '')[0]}</span>}
+          <ApiImage path={d.has_photo ? `/doctors/${d.id}/photo` : null} className="h-14 w-14 rounded-full object-cover" fallback={<span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-100 text-xl font-bold text-teal-900">{d.user?.name?.replace('Dr. ', '')[0]}</span>} />
           <span><strong className="block">{d.user?.name}</strong><span className="mm-muted block text-sm">{d.specialty || 'Specialty not listed'} · {d.experience_years ?? '—'} yrs</span><span className="block text-xs">{d.qualifications}</span><Badge tone="green">{d.verification_label}</Badge></span>
         </button>)}
       </div>
@@ -181,7 +181,7 @@ export function RecordsArchive({ token, prescriptions, reports, orders, invoices
   ].filter(r => (type === 'ALL' || r.kind === type) && `${r.title} ${r.who} ${r.status}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const openReport = async id => { try { setView(await careApi(`/reports/${id}`, { token })); } catch (e) { setMsg(e.message); } };
   const download = async id => {
-    try { const res = await fetch(`${API_ORIGIN}/api/v1/reports/${id}/file`, { headers: { Authorization: `Bearer ${token}` } }); if (!res.ok) throw new Error('File not available.');
+    try { const res = await apiFetch(`/reports/${id}/file`, { token }); if (!res.ok) throw new Error('File not available.');
       const url = URL.createObjectURL(await res.blob()); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); } catch (e) { setMsg(e.message); }
   };
   return <Section id="dashboard-reports" eyebrow="Health records" title="Records archive">

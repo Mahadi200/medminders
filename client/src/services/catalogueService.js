@@ -4,6 +4,7 @@
  * (/api/v1/catalogue) with graceful offline fallback to bundled dataset.
  */
 import fallbackAntibiotics from '../data/antibiotics.json';
+import { apiHeaders } from './careApi';
 
 // Laravel API is the default local backend. Override with VITE_API_URL when deployed.
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -13,7 +14,7 @@ let cachedMetadata = null;
 
 export async function fetchCatalogueMetadata() {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/catalogue/version`);
+    const res = await fetch(`${API_BASE}/api/v1/catalogue/version`, { headers: apiHeaders(null, false) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return {
@@ -51,7 +52,7 @@ export async function fetchAntibioticsCatalogue(forceRefresh = false) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/v1/catalogue/antibiotics`);
+    const res = await fetch(`${API_BASE}/api/v1/catalogue/antibiotics`, { headers: apiHeaders(null, false) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     
@@ -94,7 +95,7 @@ export async function fetchAntibioticsCatalogue(forceRefresh = false) {
 export async function searchServerCatalogue(query) {
   if (!query || query.trim().length < 2) return [];
   try {
-    const res = await fetch(`${API_BASE}/api/v1/catalogue/search?q=${encodeURIComponent(query.trim())}`);
+    const res = await fetch(`${API_BASE}/api/v1/catalogue/search?q=${encodeURIComponent(query.trim())}`, { headers: apiHeaders(null, false) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return data.items || [];

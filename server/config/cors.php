@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Bearer-token API (no cookies), so credentials are not needed cross-origin.
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'https://medminders.vercel.app,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173'))))),
 
     'allowed_origins_patterns' => [],
 

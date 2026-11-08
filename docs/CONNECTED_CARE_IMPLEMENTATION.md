@@ -228,3 +228,12 @@ Still incomplete: licensed interaction data integration, private message/problem
 ## Pitch-demo pass (8 November 2026)
 
 See `docs/demo/FEATURE_STATUS.md` for the gap matrix, working-vs-roadmap list and external blockers, and `docs/demo/DEMO_RUNBOOK.md` for startup, fixtures and recovery. Key additions: additive migration `2026_11_08_000001_add_affiliations_booking_and_alarm_state`; `AffiliationController`, `AlarmController`, `CareTeamController`; patient-initiated sharing and `/shared-with-me`; event-producer notifications; `demo:seed-fictional` command (non-production, credentials in git-ignored `storage/app/demo-credentials.local.txt`); new portal components under `client/src/components/portal/`; `tests/Feature/DemoWorkflowTest.php`. Fixed: session loss on navigation, production MFA bypass guard, IP-keyed rate limiting. Verification: 17 tests / 170 assertions; Vite build; real-browser walkthrough of all 10 demo steps.
+
+## Phase 1 — live frontend + local backend (9 November 2026)
+
+- Auth model: the API uses **Sanctum bearer tokens** (stateful cookie middleware is disabled). Tokens are stored per tab and sent as `Authorization: Bearer`, so cross-origin calls from Vercel need no cookies, CSRF or `supports_credentials`.
+- CORS: explicit origins from `CORS_ALLOWED_ORIGINS` (default: `https://medminders.vercel.app`, `http://127.0.0.1:5173`, `http://localhost:5173`); unknown origins get no CORS headers (`CorsTest`).
+- Every client request sends `ngrok-skip-browser-warning: true`; API images (doctor photos) are fetched with headers and shown via object URLs.
+- Network failures show "Service is temporarily offline. Please try again shortly."; details go to the browser console only. The public doctor section hides itself when empty/unavailable.
+- `start-backend.ps1` opens API, scheduler, queue worker and ngrok windows. `client/vercel.json` mirrors the SPA rewrite so deep links work whether Vercel's Root Directory is the repo root or `client/`.
+- Pending on the owner: ngrok install + authtoken + static domain; Vercel `VITE_API_URL`; Vercel build log for the failing production deploy.

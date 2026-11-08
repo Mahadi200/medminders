@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { careApi } from '../../services/careApi';
+import { ApiImage, careApi } from '../../services/careApi';
 import { useAppPreferences } from '../../context/AppPreferences';
 
 export default function PublishedDoctors() {
@@ -7,14 +7,14 @@ export default function PublishedDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
-  useEffect(() => { careApi('/doctors').then(setDoctors).catch(e => setError(e.message)); }, []);
+  useEffect(() => { careApi('/doctors').then(setDoctors).catch(e => { console.warn('[MedMinders] doctor catalogue unavailable', e); setError('unavailable'); }); }, []);
+  // Hide the whole section when the catalogue is unavailable or empty; details go to the console only.
+  if (error || !doctors.length) return null;
   return <section className="bg-slate-50 px-5 py-12" aria-label="Published doctors">
     <div className="mx-auto max-w-6xl"><h2 className="text-3xl font-bold text-slate-900">{isBangla ? 'যাচাইকৃত চিকিৎসক' : 'Published doctors'}</h2>
       <p className="mt-2 text-slate-600">{isBangla ? 'শুধু যাচাইকৃত এবং প্রকাশিত প্রোফাইল দেখানো হয়।' : 'Only verified, published profiles appear here.'}</p>
-      {error && <p className="mt-4 text-red-700">Doctor catalogue is unavailable: {error}</p>}
-      {!error && !doctors.length && <p className="mt-6 text-slate-600">No published doctor profiles yet.</p>}
-      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{doctors.map(doctor => <article className="rounded-2xl border bg-white p-5 shadow-sm" key={doctor.id}>
-        {doctor.has_photo && <img className="mb-4 h-40 w-40 rounded-xl object-cover" src={`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/doctors/${doctor.id}/photo`} alt={doctor.user?.name || 'Doctor'} />}
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{doctors.map(doctor => <article className="rounded-2xl border bg-white p-5 shadow-sm" key={doctor.id}>
+        {doctor.has_photo && <ApiImage className="mb-4 h-40 w-40 rounded-xl object-cover" path={`/doctors/${doctor.id}/photo`} alt={doctor.user?.name || 'Doctor'} />}
         <h3 className="text-xl font-semibold">{doctor.user?.name}</h3><p className="text-teal-700">{doctor.specialty || 'Doctor'}</p>
         <p className="text-sm text-slate-600">{doctor.hospital_clinic}</p><p className="text-sm">{doctor.chamber}</p>
         <button className="mt-4 text-sm font-semibold text-teal-800 underline" onClick={() => setSelected(doctor)}>View details</button>

@@ -6,6 +6,7 @@
 | Forgetfulness, interactions, side effects, limited history, AMR | Deck slide 2; earlier AMR requirement | Courses, support alerts, AWaRe provenance, AMR page | Licensed interaction source; richer side-effect attachments | Partial | Interaction endpoint fails closed; course tests |
 | Six product solutions | Deck slide 3 | Connected portal, prescriptions, reports, reminders, messaging, medication problems | PDF archive and AI assistance | Partial | API tests and dashboard build |
 | Commercial/financial pitch content | Deck slides 4–5 | Operational billing/invoices only | None for excluded pitch content | Excluded | No marketing/pricing pages added |
+| Live deployment (Vercel + tunnel) | Phase 1 request | CORS list, bearer auth, ngrok header, start-backend.ps1, SPA rewrite | Owner: ngrok domain, Vercel env var, build log | Partial | CorsTest; local build |
 | Four portals | Deck slide 6; portal requirements | Route-derived patient/doctor/pharmacy/hospital entry and dashboards | Full approved staff browser fixtures | Implemented locally | Browser role-switch checks; auth tests |
 | Team | Deck slide 7 | Team page and homepage preview | Separate verified portraits and title confirmation | Implemented from supplied text, titles flagged | `/team` browser render |
 | Recognition/appreciation claims | Deck slide 8 | None published | Evidence review | Intentionally omitted | No endorsement or institutional claim in UI |
